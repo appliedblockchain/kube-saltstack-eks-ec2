@@ -1,0 +1,24 @@
+open_mode: True
+pillar_raise_on_missing: True
+auto_accept: True
+hash_type: sha256
+worker_threads: 25
+timeout: 60
+gather_job_timeout: 100
+ping_on_rotate: True
+renderer: jinja | yaml
+git_pillar_global_lock: False
+log_level: warning
+log_level_logfile: warning
+pillarenv_from_saltenv: true
+
+
+module_dirs:
+  - /srv/salt/ext
+
+peer:
+  '*':
+    - '*'
+
+engines:
+  - example: {}

@@ -1,0 +1,12 @@
+FROM saltstack_base:ubuntu
+
+RUN apt-get update && apt-get clean && \
+  rm -rf /var/lib/apt/lists/*
+
+RUN echo "file_client: local" >> /etc/salt/minion.d/file_client.conf
+
+RUN mkdir -p /etc/services.d/salt
+COPY ./templates/services/ubuntu/run-minion /etc/services.d/salt/run
+COPY ./templates/services/ubuntu/finish /etc/services.d/salt/
+COPY ./templates/scripts/salt-reload-config /usr/local/bin
+RUN chmod +x /usr/local/bin/salt-reload-config

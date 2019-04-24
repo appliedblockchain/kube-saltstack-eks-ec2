@@ -1,0 +1,3 @@
+stg:
+  '*.dev.*':
+    - example

@@ -1,0 +1,16 @@
+# -*- mode: yaml -*-
+# vi: set ft=yaml :
+---
+MEM_MASTER: 1024
+MEM_MINION: 512
+CPU_MASTER: 1
+CPU_MINION: 1
+GUI: false
+BOX: "ubuntu/bionic64"
+DOMAIN: ".saltstack.inet"
+NETWORK: "192.168.77."
+NETMASK: "255.255.255.0"
+MINIONS: 1
+SALT_VERSION: "2019.2.0"
+#MINION_EXPOSE_PORT: 3000
+#MINION_ADD_DISK: true

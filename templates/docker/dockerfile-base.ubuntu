@@ -1,0 +1,39 @@
+FROM ubuntu:18.04
+WORKDIR /srv
+
+ENV DEBIAN_FRONTEND noninteractive
+ENV LANG C.UTF-8  
+ENV LC_ALL C.UTF-8  
+
+RUN mkdir -p /etc/salt/minion.d/ /etc/salt/master.d/
+
+RUN apt-get update && \
+    apt-get install -y curl wget vim less unzip apt-transport-https software-properties-common apt-utils ca-certificates locales
+
+
+# Adds s6 overlay
+ADD https://github.com/just-containers/s6-overlay/releases/download/v1.21.2.2/s6-overlay-amd64.tar.gz /tmp/
+RUN tar xzf /tmp/s6-overlay-amd64.tar.gz -C /
+
+RUN apt-get update && \
+  ACCEPT_EULA=Y apt-get install -y \
+  python3 \
+  python3-pip \
+  && apt-get clean && \
+  rm -rf /var/lib/apt/lists/*
+
+
+RUN mkdir -p /etc/services.d/sshd
+COPY ./templates/services/ubuntu/run-sshd /etc/services.d/sshd/run
+
+RUN mkdir -p /var/run/sshd && \
+    mkdir /root/.ssh && chmod 700 /root/.ssh && \
+    touch /root/.ssh/authorized_keys
+
+COPY ["./Pipfile*", "/tmp/"]
+
+RUN pip3 install pipenv==2018.11.26 && \
+  cd /tmp && \
+  pipenv install --dev --system --deploy
+
+ENTRYPOINT ["/init"]

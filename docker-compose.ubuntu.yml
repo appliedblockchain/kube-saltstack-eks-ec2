@@ -1,0 +1,71 @@
+version: '3'
+
+services:
+  base:
+    image: "saltstack_base:ubuntu"
+    command: "true" # https://github.com/docker/compose/issues/1284
+    build:
+      context: .
+      dockerfile: templates/docker/dockerfile-base.ubuntu
+
+  minion:
+    image: "saltstack_minion:ubuntu"
+    depends_on:
+      - base
+    command: "true" # https://github.com/docker/compose/issues/1284
+    build:
+      context: .
+      dockerfile: templates/docker/dockerfile-minion.ubuntu
+
+  master:
+    depends_on:
+      - base
+    image: "saltstack_master:ubuntu"
+    build:
+      context: .
+      dockerfile: templates/docker/dockerfile-master.ubuntu
+    volumes:
+      - .:/srv
+      - ./templates/etc/master:/etc/salt/master
+      - ./templates/etc/master.d/overrides.conf.local:/etc/salt/master.d/overrides.conf
+      - ./templates/etc/master.d/jenkins.json.local:/etc/salt/master.d/jenkins.json
+      - ./templates/etc/minion:/etc/salt/minion
+      - ./templates/etc/minion.d/overrides.conf.local:/etc/salt/minion.d/overrides.conf
+    expose:
+      - "4505"
+      - "4506"
+    hostname: master
+    tty: true
+
+  minion1:
+    image: "saltstack_minion:ubuntu"
+    depends_on:
+      - base
+      - minion
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./templates/etc/minion:/etc/salt/minion
+      - ./templates/etc/minion.d/overrides.conf.local:/etc/salt/minion.d/overrides.conf
+    hostname: minion-local-int-1
+    links:
+    - master
+    tty: true
+
+  masterless:
+    container_name: saltstack_masterless_1
+    depends_on:
+      - base
+    build:
+      context: .
+      dockerfile: templates/docker/dockerfile-masterlessminion.ubuntu
+    hostname: minion-local-int-masterless
+    ports:
+      - "2022:22"
+    volumes:
+      - .:/srv
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./templates/etc/master:/etc/salt/minion
+      - ./templates/etc/master.d/overrides.conf.local:/etc/salt/minion.d/overrides.conf
+      - ./templates/etc/minion.d/mode.conf.local:/etc/salt/minion.d/mode.conf
+      - "${HOME}/.ssh/id_rsa.pub:/root/.ssh/authorized_keys:ro"
+    tty: true

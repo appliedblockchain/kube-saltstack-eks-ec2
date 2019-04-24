@@ -1,0 +1,16 @@
+FROM saltstack_base:ubuntu
+
+RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - && \
+  apt-key fingerprint 0EBFCD88 && add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" && \
+  apt-get update && apt-get install -y \
+    docker-ce && \
+  apt-get clean && \
+  rm -rf /var/lib/apt/lists/*
+
+RUN echo "master: master" >> /etc/salt/minion.d/master.conf
+
+RUN mkdir -p /etc/services.d/salt
+COPY ./templates/services/ubuntu/run-minion /etc/services.d/salt/run
+COPY ./templates/services/ubuntu/finish /etc/services.d/salt/
+COPY ./templates/scripts/salt-reload-config /usr/local/bin
+RUN chmod +x /usr/local/bin/salt-reload-config

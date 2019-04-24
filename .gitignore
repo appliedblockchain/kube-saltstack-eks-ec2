@@ -1,0 +1,16 @@
+# Vagrant files
+vagrant_overrides.yaml
+.vagrant/*
+
+# Uneeded top level .log files (like vagrant generates)
+*.log
+
+# Ignore local env files
+salt/environments/local/pillars/*
+salt/environments/local/states/*
+
+# Mac 
+.DS_Store
+
+# IDE project folders
+.vscode
