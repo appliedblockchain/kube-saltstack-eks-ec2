@@ -28,7 +28,7 @@ services:
       - .:/srv
       - ./templates/etc/master:/etc/salt/master
       - ./templates/etc/master.d/overrides.conf.local:/etc/salt/master.d/overrides.conf
-      - ./templates/etc/master.d/jenkins.json.local:/etc/salt/master.d/jenkins.json
+      - ./templates/etc/master.d/nacl.config:/etc/salt/master.d/nacl.config
       - ./templates/etc/minion:/etc/salt/minion
       - ./templates/etc/minion.d/overrides.conf.local:/etc/salt/minion.d/overrides.conf
     expose:
@@ -66,6 +66,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./templates/etc/master:/etc/salt/minion
       - ./templates/etc/master.d/overrides.conf.local:/etc/salt/minion.d/overrides.conf
+      - ./templates/etc/master.d/nacl.config:/etc/salt/master.d/nacl.config
       - ./templates/etc/minion.d/mode.conf.local:/etc/salt/minion.d/mode.conf
       - "${HOME}/.ssh/id_rsa.pub:/root/.ssh/authorized_keys:ro"
     tty: true

@@ -1,6 +1,9 @@
 OS?=ubuntu
 
+.DEFAULT_GOAL := help
+
 docker-compose:
+	@printf "\n==> Docker-Compose Version\n"
 	@docker-compose version
 
 docker-build:
@@ -12,7 +15,7 @@ docker-start: docker-compose
 docker-start-masterless: docker-compose
 	docker-compose -f docker-compose.${OS}.yml up -d masterless
 
-docker-clean: docker-compose
+docker-clean: docker-compose ## Destroy development setup
 	docker-compose -f docker-compose.${OS}.yml down
 	docker-compose -f docker-compose.${OS}.yml rm
 
@@ -37,4 +40,5 @@ test-style: setup ## test all style check
 test: test-style
 
 help: ## display this help screen
+	@printf "\n==> Available commands:\n"
 	@grep -h -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'

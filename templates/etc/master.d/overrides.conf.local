@@ -1,4 +1,4 @@
-environment: local
+saltenv: local
 worker_threads: 3
 
 file_roots:
