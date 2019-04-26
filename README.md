@@ -14,8 +14,19 @@ git clone git@github.com:appliedblockchain/saltstack.git
 
 Python 3.6 (default for ubuntu 18.04)
 ```
-brew install --ignore-dependencies https://raw.githubusercontent.com/Homebrew/homebrew-core/f2a764ef944b1080be64bd88dca9a1d80130c558/Formula/python.rb
+brew install zlib pyenv
 ```
+Run `pyenv init` and follow the instructions
+```
+pyenv install 3.6.5
+```
+
+
+If you find issues with `pyenv install` not finding the `zlib`,
+```
+brew info zlib
+```
+and run the commands under the section `For compilers to find zlib ...`
 
 Pipenv
 ```
