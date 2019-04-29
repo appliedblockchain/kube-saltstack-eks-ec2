@@ -1,1 +1,1 @@
-environment: stg
+saltenv: stg

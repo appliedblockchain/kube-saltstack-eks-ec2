@@ -8,7 +8,7 @@ ENV LC_ALL C.UTF-8
 RUN mkdir -p /etc/salt/minion.d/ /etc/salt/master.d/
 
 RUN apt-get update && \
-    apt-get install -y curl wget vim less unzip apt-transport-https software-properties-common apt-utils ca-certificates locales
+    apt-get install -y curl wget vim less unzip apt-transport-https software-properties-common apt-utils ca-certificates locales libsodium23
 
 
 # Adds s6 overlay

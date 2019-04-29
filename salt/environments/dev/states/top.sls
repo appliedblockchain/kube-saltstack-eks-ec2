@@ -1,3 +1,3 @@
-stg:
+dev:
   '*':
     - base.latest

@@ -1,0 +1,17 @@
+saltenv: dev
+worker_threads: 10
+
+file_roots:
+  base:
+    - /srv/salt/ext
+  dev:
+    - /srv/salt/ext
+    - /srv/salt/environments/dev/states
+    - /srv/salt/environments/stg/states
+    - /srv/salt/environments/prd/states
+
+pillar_roots:
+  base:
+    - /srv/salt/environments/base/pillars
+  dev:
+    - /srv/salt/environments/dev/pillars

@@ -105,6 +105,13 @@ The salt is the directory where all the code goes.
 `local` : This environment serves as a fake for local development. It should be used to override stuff like pillars that, for instance,
 have encrypted values for the remaining environments. Remember to create your own `top.sls` for this environment and do not ever commit your local pillars. `.gitignore` is setup so to ignore most files inside this folder but do make sure you do not commit and add any new case to the `.gitginore`.
 
+## Pillar encryption
+Salstack allows for pillars to be encrypted to safely store secrets in you code repository. To encrypt secrets you only need the public key which is stored, for each environment, in `nacl` pillar under `nacl.config > pk` for convenience.
+In order to encrypt strings values, use the following command:
+```salt-call nacl.enc "value" pk='<environment public key>'```
+The resulting encrypted string should be inserted in the desired pillar as follows:
+```key: {{salt.nacl.dec('<encrypted string>')}}```
+
 ### Best Practices and Conventions
 Conventions are key in order to improve cross-team colaboration. Here follows some conventions and best practices in order for everyone to chip in safely :)
 - All pillars need to have their top level key same as file name to ensure no collision.

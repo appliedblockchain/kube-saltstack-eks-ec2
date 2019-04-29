@@ -14,3 +14,7 @@ salt/environments/local/states/*
 
 # IDE project folders
 .vscode
+
+
+# Python build files
+__pycache__/
