@@ -1,0 +1,6 @@
+{%- set eip_configs = {
+    'eip': {
+        'name': bastion_configs.ec2.name + '-eip',
+        'instance': "${module."+bastion_configs.ec2.name+".id[0]}"
+    }
+} -%}

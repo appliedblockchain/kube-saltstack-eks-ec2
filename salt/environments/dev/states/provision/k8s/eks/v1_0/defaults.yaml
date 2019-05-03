@@ -1,0 +1,6 @@
+work_dir: /tmp/k8s
+tf_version: 0.11.13
+tf_plan_file: main.tf
+tf_plan_name: plan.tfplan
+kubectl_version: 1.14.0
+aws_iam_auth_version: 1.12.7/2019-03-27

@@ -1,0 +1,10 @@
+{%- set eks_configs = {
+    'eks': {
+        'name': _pillar.cluster_name,
+        'vpc': vpc_configs.vpc.name,
+        'security_group': security_groups[0].security_group.name,
+        'workers_security_group': security_groups[1].security_group.name,
+        'workers_instance_size': _pillar.workers.size,
+        'workers_instance_count': _pillar.workers.count
+    }
+} -%}

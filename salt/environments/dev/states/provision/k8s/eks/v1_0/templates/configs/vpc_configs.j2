@@ -1,0 +1,10 @@
+{%- set vpc_configs = {
+    'vpc': {
+        'name': _pillar.cluster_name + '-vpc',
+        'cidr': _pillar.network.cidr,
+        'subnets': {
+            'private': _pillar.network.subnets.private,
+            'public': _pillar.network.subnets.public
+        }
+    }
+} -%}

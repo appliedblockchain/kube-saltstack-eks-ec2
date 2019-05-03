@@ -1,0 +1,11 @@
+{%- set bastion_configs = {
+    'ec2': {
+        'name': _pillar.cluster_name + '-bastion',
+        'size': _pillar.bastion_size,
+        'security_group': _pillar.cluster_name + '-bastion-sg',
+        'cloud_init_file': _configs.work_dir + "/cloud-init-" + _pillar.cluster_name + '-bastion',
+        'subnet_id': "${element(module."+vpc_configs.vpc.name+".public_subnets, 0)}",
+        'ami': 'bastion-ami',
+        'key': _pillar.security.ssh_keys[0].name
+    }
+} -%}
