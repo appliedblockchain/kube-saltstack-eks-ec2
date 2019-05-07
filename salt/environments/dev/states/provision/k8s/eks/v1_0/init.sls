@@ -43,31 +43,34 @@ tools_dir:
 unzip:
     pkg.installed
 
-terraform_install:
-    cmd.run:
-        - name: |
-            curl -s https://releases.hashicorp.com/terraform/{{_configs.tf_version}}/terraform_{{_configs.tf_version}}_linux_amd64.zip -o {{ _configs.work_dir }}/bin/terraform.zip
-            unzip -o {{ _configs.work_dir }}/bin/terraform.zip -d {{ _configs.work_dir }}/bin/
-        - creates: 
-            - {{ _configs.work_dir }}/bin/terraform.zip
-            - {{ _configs.work_dir }}/bin/terraform
-        - require:
-            - pkg: unzip
+terraform_{{_configs.tf_version}}_linux_amd64.zip:
+  file.managed:
+    - name: {{ _configs.work_dir }}/bin/terraform.zip
+    - source: https://releases.hashicorp.com/terraform/{{_configs.tf_version}}/terraform_{{_configs.tf_version}}_linux_amd64.zip
+    - source_hash: https://releases.hashicorp.com/terraform/{{_configs.tf_version}}/terraform_{{_configs.tf_version}}_SHA256SUMS
+    - failhard: true
 
-kubectl_install:
-    cmd.run:
-        - name: |
-            curl -sL https://storage.googleapis.com/kubernetes-release/release/v{{_configs.kubectl_version}}/bin/linux/amd64/kubectl -o {{ _configs.work_dir }}/bin/kubectl
-            chmod +x {{ _configs.work_dir }}/bin/kubectl
-        - creates: {{ _configs.work_dir }}/bin/kubectl
+{{ _configs.work_dir }}/bin/:
+  archive.extracted:
+    - source: {{ _configs.work_dir }}/bin/terraform.zip
+    - enforce_toplevel: false
+    - use_cmd_unzip: true
+    - failhard: true
 
-aws_iam_authenticator_install:
-    cmd.run:
-        - name: |
-            curl -s https://amazon-eks.s3-us-west-2.amazonaws.com/{{_configs.aws_iam_auth_version}}/bin/linux/amd64/aws-iam-authenticator -o {{ _configs.work_dir }}/bin/aws-iam-authenticator
-            chmod +x {{ _configs.work_dir }}/bin/aws-iam-authenticator
-        - creates: {{ _configs.work_dir }}/bin/aws-iam-authenticator
+kubectl:
+  file.managed:
+    - name: {{ _configs.work_dir }}/bin/kubectl
+    - mode: 755
+    - source: https://storage.googleapis.com/kubernetes-release/release/v{{_configs.kubectl_version}}/bin/linux/amd64/kubectl
+    - skip_verify: true
+    - failhard: true
 
+aws-iam-authenticator:
+  file.managed:
+    - name: {{ _configs.work_dir }}/bin/aws-iam-authenticator
+    - source: https://amazon-eks.s3-us-west-2.amazonaws.com/{{_configs.aws_iam_auth_version}}/bin/linux/amd64/aws-iam-authenticator
+    - source_hash: https://amazon-eks.s3-us-west-2.amazonaws.com/{{_configs.aws_iam_auth_version}}/bin/linux/amd64/aws-iam-authenticator.sha256
+    - failhard: true
 
 # Make sure plan file exists in FS so you can simply append to it
 {{ _configs.work_dir +'/'+ _configs.tf_plan_file }}_create:
