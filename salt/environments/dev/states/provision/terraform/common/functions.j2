@@ -1,0 +1,14 @@
+# Load a .tf file and append it to terraform plan
+{%- macro load_terraform_template(template, configs=none, index=0) -%}
+terraform_{{ _pillar.provider }}_{{ template }}_{{index}}:
+  file.append:
+    - name: {{ [_configs.work_dir, client_id, _configs.tf_plan_file] | join("/") }}
+    - template: jinja
+    - source: salt://provision/terraform/{{_pillar.provider}}/templates/{{template}}.tf
+    - failhard: True
+    {%- if configs is defined %}
+    - defaults:
+        configs:  {{ configs }}
+        _pillar:  {{ _pillar }}
+    {%- endif %}
+{%- endmacro %}

@@ -16,17 +16,9 @@ client_id_pillar:
 k8s_provision_test_pillar:
   test.check_pillar:
     - present:
-      - {{ client_id }}:provision:k8s:provider
-      - {{ client_id }}:provision:k8s:cluster_name
-      - {{ client_id }}:provision:k8s:bastion_size
-      - {{ client_id }}:provision:k8s:workers:size
-      - {{ client_id }}:provision:k8s:workers:count
-      - {{ client_id }}:provision:k8s:network:cidr
-      - {{ client_id }}:provision:k8s:network:subnets:public
-      - {{ client_id }}:provision:k8s:network:subnets:private
-      - {{ client_id }}:provision:k8s:security:ssh_keys
+      - {{ client_id }}:provision:cicd
     - failhard: true
-{%- set _pillar = salt.pillar.get(client_id + ":provision:k8s") %}
+{%- set _pillar = salt.pillar.get(client_id + ":provision:cicd") %}
 
 k8s_authentication_test_pillar:
   test.check_pillar:
@@ -34,7 +26,7 @@ k8s_authentication_test_pillar:
       - {{ client_id }}:authentication:{{ _pillar.provider }}:saltstack:aws_access_key_id
       - {{ client_id }}:authentication:{{ _pillar.provider }}:saltstack:aws_secret_access_key
     - failhard: true
-{%- set _auth = salt.pillar.get([client_id, 'authentication', _pillar.provider]|join(':')) -%}
+{%- set _auth = salt.pillar.get([client_id, 'authentication',_pillar.provider]|join(':')) -%}
 
 
 {%- set configs_dir = tpldir + '/templates/configs/'-%}
@@ -45,7 +37,6 @@ k8s_authentication_test_pillar:
 include:
   - provision.tools.install_terraform
   - provision.tools.install_aws_iam_authenticator
-  - provision.tools.install_kubectl
 
 # Make sure plan file exists in FS so you can simply append to it
 {{ [_configs.work_dir, client_id, _configs.tf_plan_file] | join("/") }}:
@@ -57,21 +48,21 @@ include:
 {% from "provision/terraform/common/functions.j2" import load_terraform_template with context %}
 
 
+
 {% from common_configs_dir + 'provider_configs.j2' import provider_configs with context%}
 {% from common_configs_dir + 'terraform_backend_configs.j2' import terraform_backend_configs with context %}
 {% from configs_dir + 'vpc_configs.j2' import vpc_configs with context %}
 {% set security_groups = [] %}
-{% for sg in ['control-plane','workers','bastion'] %}
+{% for sg in ['cicd','bastion'] %}
     {% do security_groups.append({'security_group': {
-        'name': [_pillar.cluster_name, sg, 'sg'] | join('-'),
+        'name': ['cicd-ab', sg, 'sg'] | join('-'),
         'vpc': vpc_configs.vpc.name,
         'rules': tpldir + '/templates/sg_rules/' + sg + '.tf'
     }}) %}
 {% endfor %}
-{% from configs_dir + 'bastion_ami_configs.j2' import bastion_ami_configs with context %}
+{% from configs_dir + 'ami_configs.j2' import ami_configs with context %}
 {% from configs_dir + 'bastion_configs.j2' import bastion_configs with context %}
 {% from configs_dir + 'eip_configs.j2' import eip_configs with context %}
-{% from configs_dir + 'eks_configs.j2' import eks_configs with context %}
 
 # Setup Provider 
 {{ load_terraform_template("provider", provider_configs) }}
@@ -89,24 +80,61 @@ include:
 {% endfor %}
 
 # Setup SSH Keys
-{%- for key in _auth.ssh_keys -%}
-    {%- set key_pair_configs = { 'key_pair': {
+{%- set keys = [_pillar.bastion_default_ssh_key]-%}
+{%- for vm in _pillar.virtual_machines -%}
+  {%- for key in vm.security.ssh_keys -%}
+    {%- do keys.append(key) -%}
+  {%- endfor -%}
+{%- endfor -%}
+
+{%- for key_name in (keys|unique) -%}
+ {%- for key in _auth.ssh_keys -%}
+  {%- if key_name == key.name -%}
+      {%- set key_pair_configs = { 'key_pair': {
             'name': key.name,
             'public_key': key.public_key }}%}
 {{ load_terraform_template("key_pair", key_pair_configs, index=loop.index)}}
-{% endfor -%}
+  {%- else %}
+{{ key_name }}_missing_key_definition:
+  test.fail_without_changes:
+    - name: "Missing ssh key defininion for: {{ key_name }}. Check pillar <client_id>:authentication:<provider>:ssh_keys"
+    - failhard: true
+  {%- endif -%}
+ {%- endfor -%}
+{%- endfor -%}
+
 
 # Setup EC2 Bastion
-{{ load_terraform_template("ami", bastion_ami_configs)}} # AMI - Bastion Instance Image
+{{ load_terraform_template("ami", ami_configs)}} # AMI - Bastion Instance Image
 {{ load_terraform_template("ec2", bastion_configs)}} # Bastion Intance
 {{ load_terraform_template("eip", eip_configs)}} # Elastic IP (public)
-
-# Setup EKS Cluster
-{{ load_terraform_template("eks", eks_configs)}} # EKS Cluster
 
 # Generate Bastion Cloud-init
 {{ bastion_configs.ec2.cloud_init_file }}:
   file.managed:
     - template: jinja
-    - source: salt://{{tpldir}}/templates/cloud-init.conf
+    - source: salt://{{tpldir}}/templates/cloud-init-bastion.conf
     - failhard: True
+
+# Generate Cloud-init for VMs
+{{ _configs.work_dir + '/' + client_id + '/cloud-init-cicd-ab-vm' }}:
+  file.managed:
+    - template: jinja
+    - source: salt://{{tpldir}}/templates/cloud-init-vm.conf
+    - failhard: True
+
+{%- for vm in _pillar.virtual_machines -%}
+  {%- set count = vm.instances if vm.instances is defined else 1 -%}  
+  {%- for i in range(count)  %}
+    {% set vm_configs = { 'ec2': {
+      'name': 'cicd-ab-' + vm.name + '-' + (i + 1) | string,
+      'size': vm.size,
+      'security_group': 'cicd-ab-cicd-sg',
+      'subnet_id': "${element(module."+vpc_configs.vpc.name+".private_subnets, 0)}",
+      'ami': 'vm-ami',
+      'cloud_init_file': _configs.work_dir + '/' + client_id + '/cloud-init-cicd-ab-vm',
+      'key': vm.security.ssh_keys[0]
+    }}%}
+{{ load_terraform_template("ec2", vm_configs, i+1)}} 
+  {%- endfor -%}
+{%- endfor -%}
