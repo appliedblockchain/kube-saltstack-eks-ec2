@@ -7,8 +7,10 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Test
+          name: Setup Pipenv
           command: |
               pip install pipenv==2018.05.18
-              make setup
-              make test
+      - run:
+          name: Test Flake8
+          command: |
+              make test-style
