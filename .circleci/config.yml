@@ -1,0 +1,16 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: python:3.6
+
+    steps:
+      - checkout
+      - run:
+          name: Setup Pipenv
+          command: |
+              pip install pipenv==2018.05.18
+      - run:
+          name: Test Flake8
+          command: |
+              make test-style
