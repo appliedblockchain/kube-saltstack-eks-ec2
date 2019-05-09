@@ -9,7 +9,7 @@ module "{{ configs.ec2.name }}" {
   instance_type               = "{{ configs.ec2.size }}"
   subnet_id                   = "{{ configs.ec2.subnet_id }}"
   vpc_security_group_ids      = ["${module.{{ configs.ec2.security_group }}.this_security_group_id}"]
-  associate_public_ip_address = true
+  associate_public_ip_address = false
   user_data                   = "${file("{{ configs.ec2.cloud_init_file }}")}"
 
   root_block_device = [{
