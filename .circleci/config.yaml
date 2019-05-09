@@ -12,3 +12,4 @@ jobs:
 		pip install pipenv==2018.05.18
 		make setup
       		make test
+
