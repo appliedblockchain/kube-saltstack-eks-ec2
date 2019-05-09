@@ -1,0 +1,14 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: python:3.6
+
+    steps:
+      - checkout
+      - run:
+          name: Test
+          command: |
+		pip install pipenv==2018.05.18
+		make setup
+      		make test
