@@ -9,7 +9,6 @@ jobs:
       - run:
           name: Test
           command: |
-		pip install pipenv==2018.05.18
-		make setup
-      		make test
-
+              pip install pipenv==2018.05.18
+              make setup
+              make test
