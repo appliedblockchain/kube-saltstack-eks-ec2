@@ -1,7 +1,7 @@
 # CICD Provision State
 
 # Executing
-Executing `CICD` state generates *HCL* code that provisions all *cicd* related infrastructure defined in the pillar `provision > cicd > <client_id> ` Since this is a  sensitiv operation we should always intervene when changing infrastructure with code.
+Executing `CICD` state generates *HCL* code that provisions all *cicd* related infrastructure defined in the pillar `provision > cicd > <client_id> ` Since this is a  sensitive operation we should always intervene when changing infrastructure with code.
 
 To execute the state simply run
 
