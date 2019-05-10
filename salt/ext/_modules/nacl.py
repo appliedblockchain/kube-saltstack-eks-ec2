@@ -357,7 +357,7 @@ def sealedbox_decrypt(data, **kwargs):
     sk = _get_sk(**kwargs)
     keypair = libnacl.public.SecretKey(sk)
     b = libnacl.sealed.SealedBox(keypair)
-    return b.decrypt(base64.b64decode(data))
+    return b.decrypt(base64.b64decode(data)).decode('utf-8')
 
 
 def secretbox_encrypt(data, **kwargs):
@@ -403,4 +403,4 @@ def secretbox_decrypt(data, **kwargs):
     key = _get_sk(**kwargs)
     b = libnacl.secret.SecretBox(key=key)
 
-    return b.decrypt(base64.b64decode(data))
+    return b.decrypt(base64.b64decode(data)).decode('utf-8')
