@@ -1,12 +1,12 @@
-# EKS Provision State
+# CICD Provision State
 
 # Executing
-Executing `EKS` state generates the corresponding *HCL*. Since this is a sensitivy operation we should always intervene when changing infrastructure with code.
+Executing `CICD` state generates *HCL* code that provisions all *cicd* related infrastructure defined in the pillar `provision > cicd > <client_id> ` Since this is a  sensitive operation we should always intervene when changing infrastructure with code.
 
 To execute the state simply run
 
 ```
-$ salt-call state.apply provision.k8s.eks.latest pillar='{"client_id":"applied_blockchain"}'
+$ salt-call state.apply provision.cicd.latest pillar='{"client_id":"applied_blockchain"}'
 ```
 
 **Note:** Replace `client_id` with the appropriate value.

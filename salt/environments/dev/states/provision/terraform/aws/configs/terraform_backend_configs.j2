@@ -3,8 +3,8 @@
         'name': (client_id  + "-terraform-state-ab") | replace('_','-'),
         'key': 'terraform/dev/terraform_dev.tfstate',
         'region': "eu-west-1",
-        'access_key': _auth.aws_access_key_id,
-        'secret_key': _auth.aws_secret_access_key
+        'access_key': _auth.saltstack.aws_access_key_id,
+        'secret_key': _auth.saltstack.aws_secret_access_key
         }
     }
 -%}

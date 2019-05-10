@@ -1,0 +1,11 @@
+{%- set bastion_configs = {
+    'ec2': {
+        'name': 'cicd-ab-bastion',
+        'size': 't2.small',
+        'security_group': 'cicd-ab-bastion-sg',
+        'cloud_init_file': [_configs.work_dir, client_id, 'cloud-init-cicd-ab-bastion'] | join('/'),
+        'subnet_id': "${element(module."+vpc_configs.vpc.name+".public_subnets, 0)}",
+        'ami': 'vm-ami',
+        'key': _pillar.bastion_default_ssh_key
+    }
+} -%}

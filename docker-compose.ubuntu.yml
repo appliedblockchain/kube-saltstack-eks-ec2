@@ -47,8 +47,6 @@ services:
       - ./templates/etc/minion:/etc/salt/minion
       - ./templates/etc/minion.d/overrides.conf.local:/etc/salt/minion.d/overrides.conf
     hostname: minion-local-int-1
-    links:
-    - master
     tty: true
 
   masterless:
