@@ -1,3 +1,6 @@
-stg:
+prd:
+  '*':
+    - env
+    
   '*.prd.*':
     - example
