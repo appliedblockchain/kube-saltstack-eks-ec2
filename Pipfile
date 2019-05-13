@@ -10,6 +10,7 @@ pytest = "==3.1.1"
 
 [packages]
 salt = "==2019.2.0"
+salt-ssh = "==2019.2.0"
 libnacl = "==1.6.1"
 
 [requires]

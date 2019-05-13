@@ -112,6 +112,19 @@ In order to encrypt strings values, use the following command:
 The resulting encrypted string should be inserted in the desired pillar as follows:
 ```key: {{salt.nacl.dec('<encrypted string>')}}```
 
+## Saltmaster Deployment (Manual)
+
+On target machine
+1. Docker login
+2. Pull docker image
+3. Run
+```
+docker run --autorestart ALWAYS \
+    --name saltmaster --hostname saltmaster -p 4505:4505 -p 4506:4506 \
+    -v <host conf folder location>:/etc/salt/ \
+    <saltmaster image>
+```
+
 ### Best Practices and Conventions
 Conventions are key in order to improve cross-team colaboration. Here follows some conventions and best practices in order for everyone to chip in safely :)
 - All pillars need to have their top level key same as file name to ensure no collision.

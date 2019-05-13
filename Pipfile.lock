@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "5b91b78ed813a3507dc5760fa6f3985983f09138a0b2f5011f24eaed5839eaa1"
+            "sha256": "cd7e79ce821a1d9ecc3cae7745c212782c3d42f66d318ebe975fb1211a0f18a6"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -173,6 +173,13 @@
             "index": "pypi",
             "version": "==2019.2.0"
         },
+        "salt-ssh": {
+            "hashes": [
+                "sha256:14c9b0ca2de920950774cec147073aeb891df647f2273564a24f42af9f3a8615"
+            ],
+            "index": "pypi",
+            "version": "==2019.2.0"
+        },
         "tornado": {
             "hashes": [
                 "sha256:5ef073ac6180038ccf99411fe05ae9aafb675952a2c8db60592d5daf8401f803",
@@ -185,10 +192,10 @@
         },
         "urllib3": {
             "hashes": [
-                "sha256:4c291ca23bbb55c76518905869ef34bdd5f0e46af7afe6861e8375643ffee1a0",
-                "sha256:9a247273df709c4fedb38c711e44292304f73f39ab01beda9f6b9fc375669ac3"
+                "sha256:2393a695cd12afedd0dcb26fe5d50d0cf248e5a66f75dbd89a3d4eb333a61af4",
+                "sha256:a637e5fae88995b256e3409dc4d52c2e2e0ba32c42a6365fee8bbd2238de3cfb"
             ],
-            "version": "==1.24.2"
+            "version": "==1.24.3"
         }
     },
     "develop": {
