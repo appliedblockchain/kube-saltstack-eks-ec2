@@ -4,7 +4,7 @@ module "{{ configs.ec2.name }}" {
   instance_count = 1
 
   name                        = "{{ configs.ec2.name }}"
-  key_name                    = "{{ configs.ec2.key }}"
+  key_name                    = "{{ configs.ec2.key_name }}"
   ami                         = "${data.aws_ami.{{ configs.ec2.ami }}.id}"
   instance_type               = "{{ configs.ec2.size }}"
   subnet_id                   = "{{ configs.ec2.subnet_id }}"
