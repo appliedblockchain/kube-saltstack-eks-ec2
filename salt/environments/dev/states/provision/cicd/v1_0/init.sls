@@ -113,28 +113,44 @@ include:
 {{ bastion_configs.ec2.cloud_init_file }}:
   file.managed:
     - template: jinja
-    - source: salt://{{tpldir}}/templates/cloud-init-bastion.conf
+    - source: salt://{{tpldir}}/templates/cloud_init/cloud-init-bastion.conf
     - failhard: True
+    - defaults:
+      instance_configs: {{ bastion_configs }}
 
-# Generate Cloud-init for VMs
-{{ _configs.work_dir + '/' + client_id + '/cloud-init-cicd-ab-vm' }}:
-  file.managed:
-    - template: jinja
-    - source: salt://{{tpldir}}/templates/cloud-init-vm.conf
-    - failhard: True
 
 {%- for vm in _pillar.virtual_machines -%}
   {%- set count = vm.instances if vm.instances is defined else 1 -%}  
   {%- for i in range(count)  %}
+    {%- set vm_name = ['cicd-ab', vm.name, (i + 1) | string] | join('-') -%}
+    {%- set cloud_init_file = [_configs.work_dir, client_id, 'cloud-init-' + vm_name] | join('/') -%}
+
+    # Set VM Configs
     {% set vm_configs = { 'ec2': {
-      'name': 'cicd-ab-' + vm.name + '-' + (i + 1) | string,
+      'name': vm_name,
       'size': vm.size,
       'security_group': 'cicd-ab-cicd-sg',
-      'subnet_id': "${element(module."+vpc_configs.vpc.name+".private_subnets, 0)}",
+      'subnet_id': "${element(module." + vpc_configs.vpc.name + ".private_subnets, 0)}",
       'ami': 'vm-ami',
-      'cloud_init_file': _configs.work_dir + '/' + client_id + '/cloud-init-cicd-ab-vm',
+      'cloud_init_file': cloud_init_file,
       'key': vm.security.ssh_keys[0]
     }}%}
+
+    # Set Cloud-Init File (Pulls cloud-init-<VM Name> if exists, else falls back to default)
+    {% if salt.file.file_exists('/srv/salt/environments/' + salt.pillar.get('env') +'/states/' + tpldir + '/templates/cloud_init/cloud-init-' + vm.name + '.conf') -%}
+      {%- set cloud_init_source = 'salt://' + tpldir + '/templates/cloud_init/cloud-init-' + vm.name + '.conf' -%}
+    {%- else -%}
+      {%- set cloud_init_source = 'salt://' + tpldir + '/templates/cloud_init/cloud-init-vm.conf' -%}
+    {%- endif %}
+
+{{ vm_configs.ec2.cloud_init_file }}:
+  file.managed:
+    - template: jinja
+    - source: {{ cloud_init_source }}
+    - failhard: True
+    - defaults:
+      instance_configs: {{ vm_configs }}
+
 {{ load_terraform_template("ec2", vm_configs, i+1)}} 
   {%- endfor -%}
 {%- endfor -%}

@@ -1,3 +1,5 @@
 stg:
+  '*':
+    - env
   '*.stg.*':
     - example

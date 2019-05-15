@@ -110,3 +110,5 @@ include:
     - template: jinja
     - source: salt://{{tpldir}}/templates/cloud-init.conf
     - failhard: True
+    - defaults:
+      instance_configs: {{ bastion_configs }}
