@@ -7,6 +7,6 @@
         'subnet_id': "${element(module."+vpc_configs.vpc.name+".public_subnets, 0)}",
         'ami': 'bastion-ami',
         'public_ip_address': 'true',
-        'key': _auth.ssh_keys[0].name
+        'key': _auth.bastion_default_ssh_key
     }
 } -%}

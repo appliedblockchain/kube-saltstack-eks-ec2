@@ -133,7 +133,7 @@ include:
       'subnet_id': "${element(module." + vpc_configs.vpc.name + ".private_subnets, 0)}",
       'ami': 'vm-ami',
       'cloud_init_file': cloud_init_file,
-      'key': vm.security.ssh_keys[0]
+      'key': vm.security.default_ssh_key
     }}%}
 
     # Set Cloud-Init File (Pulls cloud-init-<VM Name> if exists, else falls back to default)
