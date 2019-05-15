@@ -12,7 +12,6 @@ applied_blockchain:
             - name: saltmaster
               size: "m5.large"
               instances: 1
-              subnet:
               security:
                 default_ssh_key: turing
                 ssh_keys: ["tiagoacf", "turing"]

@@ -8,9 +8,11 @@ client_id_pillar:
 {% import_yaml ("provision/tools/"+_configs.tools_version+"/defaults.yaml") as _tools_configs %}
 {% do _configs.update(_tools_configs) %}
 
+# Make sure client work directory exists and it's empty
 {{ _configs.work_dir }}/{{ client_id }}:
   file.directory:
-    - makedirs: True
+    - makedirs: true
+    - clean: true
 
 
 k8s_provision_test_pillar:
@@ -82,25 +84,32 @@ include:
 # Setup SSH Keys
 {%- set keys = [_pillar.bastion_default_ssh_key]-%}
 {%- for vm in _pillar.virtual_machines -%}
-  {%- for key in vm.security.ssh_keys -%}
-    {%- do keys.append(key) -%}
-  {%- endfor -%}
+    {%- do keys.append(vm.security.default_ssh_key) -%}
 {%- endfor -%}
 
 {%- for key_name in (keys|unique) -%}
+
+ # Check if key is defined
+ {%- set key_defined = [] -%}
  {%- for key in _auth.ssh_keys -%}
   {%- if key_name == key.name -%}
-      {%- set key_pair_configs = { 'key_pair': {
-            'name': key.name,
+    {%- do key_defined.append(true) -%}
+    {%- set key_pair_configs = { 'key_pair': {
+            'name': key_name,
             'public_key': key.public_key }}%}
 {{ load_terraform_template("key_pair", key_pair_configs, index=loop.index)}}
-  {%- else %}
+  {%- endif -%}
+ {%- endfor -%}
+
+
+ # Create Key Pair (or fail if key is missing definition)
+ {%- if not key_defined -%}
 {{ key_name }}_missing_key_definition:
   test.fail_without_changes:
     - name: "Missing ssh key defininion for: {{ key_name }}. Check pillar <client_id>:authentication:<provider>:ssh_keys"
     - failhard: true
   {%- endif -%}
- {%- endfor -%}
+
 {%- endfor -%}
 
 

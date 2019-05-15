@@ -8,9 +8,11 @@ client_id_pillar:
 {% import_yaml ("provision/tools/"+_configs.tools_version+"/defaults.yaml") as _tools_configs %}
 {% do _configs.update(_tools_configs) %}
 
+# Make sure client work directory exists and it's empty
 {{ _configs.work_dir }}/{{ client_id }}:
   file.directory:
-    - makedirs: True
+    - makedirs: true
+    - clean: true
 
 
 k8s_provision_test_pillar:
