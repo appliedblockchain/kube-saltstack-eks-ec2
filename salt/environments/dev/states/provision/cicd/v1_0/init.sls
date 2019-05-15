@@ -136,7 +136,7 @@ include:
       'key': vm.security.ssh_keys[0]
     }}%}
 
-    # Set Cloud-Init File (Pulls could-init-<VM Name> if exists, eles falls back to default)
+    # Set Cloud-Init File (Pulls cloud-init-<VM Name> if exists, else falls back to default)
     {% if salt.file.file_exists('/srv/salt/environments/' + salt.pillar.get('env') +'/states/' + tpldir + '/templates/cloud_init/cloud-init-' + vm.name + '.conf') -%}
       {%- set cloud_init_source = 'salt://' + tpldir + '/templates/cloud_init/cloud-init-' + vm.name + '.conf' -%}
     {%- else -%}
