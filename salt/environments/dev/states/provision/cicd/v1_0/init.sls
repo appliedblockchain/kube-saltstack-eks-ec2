@@ -8,9 +8,11 @@ client_id_pillar:
 {% import_yaml ("provision/tools/"+_configs.tools_version+"/defaults.yaml") as _tools_configs %}
 {% do _configs.update(_tools_configs) %}
 
+# Make sure client work directory exists and it's empty
 {{ _configs.work_dir }}/{{ client_id }}:
   file.directory:
-    - makedirs: True
+    - makedirs: true
+    - clean: true
 
 
 k8s_provision_test_pillar:
@@ -82,25 +84,32 @@ include:
 # Setup SSH Keys
 {%- set keys = [_pillar.bastion_default_ssh_key]-%}
 {%- for vm in _pillar.virtual_machines -%}
-  {%- for key in vm.security.ssh_keys -%}
-    {%- do keys.append(key) -%}
-  {%- endfor -%}
+    {%- do keys.append(vm.security.default_ssh_key) -%}
 {%- endfor -%}
 
 {%- for key_name in (keys|unique) -%}
+
+ # Check if key is defined
+ {%- set key_defined = [] -%}
  {%- for key in _auth.ssh_keys -%}
   {%- if key_name == key.name -%}
-      {%- set key_pair_configs = { 'key_pair': {
-            'name': key.name,
+    {%- do key_defined.append(true) -%}
+    {%- set key_pair_configs = { 'key_pair': {
+            'name': key_name,
             'public_key': key.public_key }}%}
 {{ load_terraform_template("key_pair", key_pair_configs, index=loop.index)}}
-  {%- else %}
+  {%- endif -%}
+ {%- endfor -%}
+
+
+ # Create Key Pair (or fail if key is missing definition)
+ {%- if not key_defined -%}
 {{ key_name }}_missing_key_definition:
   test.fail_without_changes:
     - name: "Missing ssh key defininion for: {{ key_name }}. Check pillar <client_id>:authentication:<provider>:ssh_keys"
     - failhard: true
   {%- endif -%}
- {%- endfor -%}
+
 {%- endfor -%}
 
 
@@ -126,15 +135,18 @@ include:
     {%- set cloud_init_file = [_configs.work_dir, client_id, 'cloud-init-' + vm_name] | join('/') -%}
 
     # Set VM Configs
-    {% set vm_configs = { 'ec2': {
+    {% set params = {
       'name': vm_name,
       'size': vm.size,
       'security_group': 'cicd-ab-cicd-sg',
-      'subnet_id': "${element(module." + vpc_configs.vpc.name + ".private_subnets, 0)}",
+      'subnet_id': '${element(module.' + vpc_configs.vpc.name + '.private_subnets, 0)}',
       'ami': 'vm-ami',
       'cloud_init_file': cloud_init_file,
-      'key': vm.security.ssh_keys[0]
-    }}%}
+      'key_name': vm.security.default_ssh_key,
+    }%}
+
+
+    {% do params.update({'public_key': (_auth.ssh_keys|selectattr("name", "equalto", params.key_name)|map(attribute="public_key")|list)[0]}) %}
 
     # Set Cloud-Init File (Pulls cloud-init-<VM Name> if exists, else falls back to default)
     {% if salt.file.file_exists('/srv/salt/environments/' + salt.pillar.get('env') +'/states/' + tpldir + '/templates/cloud_init/cloud-init-' + vm.name + '.conf') -%}
@@ -143,7 +155,9 @@ include:
       {%- set cloud_init_source = 'salt://' + tpldir + '/templates/cloud_init/cloud-init-vm.conf' -%}
     {%- endif %}
 
-{{ vm_configs.ec2.cloud_init_file }}:
+    {%- set vm_configs = { 'ec2': params } %}
+
+{{ params.cloud_init_file }}:
   file.managed:
     - template: jinja
     - source: {{ cloud_init_source }}
