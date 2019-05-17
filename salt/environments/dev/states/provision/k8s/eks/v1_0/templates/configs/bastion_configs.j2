@@ -7,7 +7,14 @@
         'subnet_id': "${element(module."+vpc_configs.vpc.name+".public_subnets, 0)}",
         'ami': 'bastion-ami',
         'public_ip_address': 'true',
-        'key_name': _auth.bastion_default_ssh_key,
-        'public_key': (_auth.ssh_keys|selectattr("name", "equalto", _pillar.bastion_default_ssh_key)|map(attribute="public_key")|list)[0], 
+        'create_key_pair': false,
+        'key_name': _pillar.bastion_default_ssh_key,
+        'public_key': (_auth.ssh_keys|selectattr("name", "equalto", _pillar.bastion_default_ssh_key)|map(attribute="public_key")|list)[0],
+        'tags': {
+            'client_id': client_id,
+            'provisioned_by': 'applied_blockchain',
+            'provisioner': 'terraform',
+            'instance_name': _pillar.cluster_name + '-bastion'
+        }
     }
 } -%}

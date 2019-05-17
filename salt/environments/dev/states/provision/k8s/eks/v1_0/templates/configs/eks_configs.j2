@@ -5,6 +5,7 @@
         'security_group': security_groups[0].security_group.name,
         'workers_security_group': security_groups[1].security_group.name,
         'workers_instance_size': _pillar.workers.size,
-        'workers_instance_count': _pillar.workers.count
+        'workers_instance_count': _pillar.workers.count,
+        'workers_user_data': 'workers_user_data.conf',
     }
 } -%}

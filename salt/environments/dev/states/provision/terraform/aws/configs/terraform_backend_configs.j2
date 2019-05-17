@@ -1,7 +1,6 @@
 {%- set terraform_backend_configs = {
     'terraform_backend': {
-        'name': (client_id  + "-terraform-state-ab") | replace('_','-'),
-        'key': 'terraform/dev/terraform_dev.tfstate',
+        'name': "applied-blockchain-terraform-state-ab",
         'region': "eu-west-1",
         'access_key': _auth.saltstack.aws_access_key_id,
         'secret_key': _auth.saltstack.aws_secret_access_key

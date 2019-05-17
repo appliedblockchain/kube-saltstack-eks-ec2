@@ -53,6 +53,9 @@ include:
 
 {% from common_configs_dir + 'provider_configs.j2' import provider_configs with context%}
 {% from common_configs_dir + 'terraform_backend_configs.j2' import terraform_backend_configs with context %}
+{% do terraform_backend_configs.terraform_backend.update({
+        'key': ['terraform', salt.pillar.get('env'), client_id, 'cicd', 'terraform.tfstate'] | join('/'),
+}) %}
 {% from configs_dir + 'vpc_configs.j2' import vpc_configs with context %}
 {% set security_groups = [] %}
 {% for sg in ['cicd','bastion'] %}
@@ -80,38 +83,6 @@ include:
 {% for sg_config in security_groups %}
 {{ load_terraform_template("security_group", sg_config, index=loop.index) }}
 {% endfor %}
-
-# Setup SSH Keys
-{%- set keys = [_pillar.bastion_default_ssh_key]-%}
-{%- for vm in _pillar.virtual_machines -%}
-    {%- do keys.append(vm.security.default_ssh_key) -%}
-{%- endfor -%}
-
-{%- for key_name in (keys|unique) -%}
-
- # Check if key is defined
- {%- set key_defined = [] -%}
- {%- for key in _auth.ssh_keys -%}
-  {%- if key_name == key.name -%}
-    {%- do key_defined.append(true) -%}
-    {%- set key_pair_configs = { 'key_pair': {
-            'name': key_name,
-            'public_key': key.public_key }}%}
-{{ load_terraform_template("key_pair", key_pair_configs, index=loop.index)}}
-  {%- endif -%}
- {%- endfor -%}
-
-
- # Create Key Pair (or fail if key is missing definition)
- {%- if not key_defined -%}
-{{ key_name }}_missing_key_definition:
-  test.fail_without_changes:
-    - name: "Missing ssh key defininion for: {{ key_name }}. Check pillar <client_id>:authentication:<provider>:ssh_keys"
-    - failhard: true
-  {%- endif -%}
-
-{%- endfor -%}
-
 
 # Setup EC2 Bastion
 {{ load_terraform_template("ami", ami_configs)}} # AMI - Bastion Instance Image
@@ -143,6 +114,12 @@ include:
       'ami': 'vm-ami',
       'cloud_init_file': cloud_init_file,
       'key_name': vm.security.default_ssh_key,
+      'tags': {
+            'client_id': client_id,
+            'provisioned_by': 'applied_blockchain',
+            'provisioner': 'terraform',
+            'instance_name': vm_name
+        }
     }%}
 
 
