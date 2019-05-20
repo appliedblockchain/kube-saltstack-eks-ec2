@@ -61,6 +61,9 @@ include:
 
 {% from common_configs_dir + 'provider_configs.j2' import provider_configs with context%}
 {% from common_configs_dir + 'terraform_backend_configs.j2' import terraform_backend_configs with context %}
+{% do terraform_backend_configs.terraform_backend.update({
+        'key': ['terraform', salt.pillar.get('env'), client_id, 'k8s/eks', 'terraform.tfstate'] | join('/'),
+}) %}
 {% from configs_dir + 'vpc_configs.j2' import vpc_configs with context %}
 {% set security_groups = [] %}
 {% for sg in ['control-plane','workers','bastion'] %}
@@ -74,6 +77,16 @@ include:
 {% from configs_dir + 'bastion_configs.j2' import bastion_configs with context %}
 {% from configs_dir + 'eip_configs.j2' import eip_configs with context %}
 {% from configs_dir + 'eks_configs.j2' import eks_configs with context %}
+
+# Workers User data file (cloud init)
+{{ [_configs.work_dir, client_id, 'workers_user_data.conf' ] | join('/') }}:
+  file.managed:
+    - template: jinja
+    - source: {{ ['salt:/', tpldir, 'templates/cloud_init/cloud-init-workers.conf'] | join('/') }}
+    - failhard: True
+    - defaults:
+      username: {{ _pillar.bastion_default_ssh_key }}
+      public_key: {{ (_auth.ssh_keys|selectattr("name", "equalto", _pillar.bastion_default_ssh_key)|map(attribute="public_key")|list)[0] }}
 
 # Setup Provider 
 {{ load_terraform_template("provider", provider_configs) }}
@@ -90,14 +103,6 @@ include:
 {{ load_terraform_template("security_group", sg_config, index=loop.index) }}
 {% endfor %}
 
-# Setup SSH Keys
-{%- for key in _auth.ssh_keys -%}
-    {%- set key_pair_configs = { 'key_pair': {
-            'name': key.name,
-            'public_key': key.public_key }}%}
-{{ load_terraform_template("key_pair", key_pair_configs, index=loop.index)}}
-{% endfor -%}
-
 # Setup EC2 Bastion
 {{ load_terraform_template("ami", bastion_ami_configs)}} # AMI - Bastion Instance Image
 {{ load_terraform_template("ec2", bastion_configs)}} # Bastion Intance
@@ -110,7 +115,7 @@ include:
 {{ bastion_configs.ec2.cloud_init_file }}:
   file.managed:
     - template: jinja
-    - source: salt://{{tpldir}}/templates/cloud-init.conf
+    - source: salt://{{tpldir}}/templates/cloud_init/cloud-init.conf
     - failhard: True
     - defaults:
       instance_configs: {{ bastion_configs }}
