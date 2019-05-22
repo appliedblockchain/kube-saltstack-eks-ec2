@@ -10,4 +10,11 @@ module "{{ configs.vpc.name }}" {
   single_nat_gateway = true
   enable_dns_hostnames = true
   enable_dns_support   = true
+  {% if configs.vpc.tags is defined -%}
+  tags = {
+  {%- for key, value in configs.vpc.tags.items() %}
+    "{{key}}" = "{{value}}"
+  {%- endfor %}
+  }
+  {%- endif %}
 }

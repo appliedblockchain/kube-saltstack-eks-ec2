@@ -5,6 +5,10 @@
         'subnets': {
             'private': _pillar.network.subnets.private,
             'public': _pillar.network.subnets.public
+        },
+        'tags': {
+            ('kubernetes.io/cluster/'+_pillar.cluster_name): "shared"
         }
     }
 } -%}
+{# kubernetest.io/... tag required for eks load balancer integration #}

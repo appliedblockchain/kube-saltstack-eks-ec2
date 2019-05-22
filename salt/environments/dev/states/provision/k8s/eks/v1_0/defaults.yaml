@@ -1,3 +1,4 @@
 tf_plan_file: main.tf
 tf_plan_name: plan.tfplan
 tools_version: v1_0
+work_dir: /tmp/provision
