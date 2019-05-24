@@ -1,9 +1,9 @@
 # K8S Deployment State
 
-This state provides an easy, single command, way to deploy a client app into is k8s cluster.
+This state provides an easy, single command, way to deploy a client app into its k8s cluster.
 
 # Executing
-Executing the state generates corresponding `.yaml` kubernetes files and applies them. The work folder, and location where these files and created is at `/tmp/deployment/<client_id>`
+Executing the state generates corresponding `.yaml` kubernetes files and applies them. The work folder, and location where these files are created is at `/tmp/deployment/<client_id>`
 
 To execute the state simply run
 
