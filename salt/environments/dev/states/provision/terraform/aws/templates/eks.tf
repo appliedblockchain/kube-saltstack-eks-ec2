@@ -25,9 +25,21 @@ module "{{ configs.eks.name }}" {
   worker_create_security_group         = "false"
   worker_security_group_id             = "${module.{{ configs.eks.workers_security_group }}.this_security_group_id}"
 
-  write_aws_auth_config = false
-  write_kubeconfig = true
+  # Executed by the null_resource bellow
+  manage_aws_auth = false
 
-  # Add binary path used in the provisioning states
-  local_exec_interpreter = ["/bin/sh", "-c", "PATH=$PATH:/tmp/terraform/bin"]
+  write_aws_auth_config = true
+  write_kubeconfig = true
+}
+
+
+# HACKERMAN - EKS Module does not allow to override location binaries like
+# kubectl, terraform, etc. As such we have to manually apply the conf file
+# to allow nodes to auth in the cluster, else it will fail silently
+resource "null_resource" "update_config_map_aws_auth" {
+  depends_on = ["module.{{ configs.eks.name }}"]
+  provisioner "local-exec" {
+    working_dir = "${path.module}"
+    command = "{{ configs.eks.tools_dir }}/kubectl --kubeconfig kubeconfig_{{ configs.eks.name }} apply -f config-map-aws-auth_{{ configs.eks.name }}.yaml"
+  }
 }

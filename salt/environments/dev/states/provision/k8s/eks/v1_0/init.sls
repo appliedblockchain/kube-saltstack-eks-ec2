@@ -5,7 +5,7 @@ client_id_pillar:
       - client_id
     - failhard: true
 {%- set client_id = pillar.get("client_id") %}
-{% import_yaml ("provision/tools/"+_configs.tools_version+"/defaults.yaml") as _tools_configs %}
+{% import_yaml ("tools/"+_configs.tools_version+"/defaults.yaml") as _tools_configs %}
 {% do _configs.update(_tools_configs) %}
 
 # Make sure client work directory exists and it's empty
@@ -45,9 +45,9 @@ k8s_authentication_test_pillar:
 # Setup Tools
 
 include:
-  - provision.tools.install_terraform
-  - provision.tools.install_aws_iam_authenticator
-  - provision.tools.install_kubectl
+  - tools.install_terraform
+  - tools.install_aws_iam_authenticator
+  - tools.install_kubectl
 
 # Make sure plan file exists in FS so you can simply append to it
 {{ [_configs.work_dir, client_id, _configs.tf_plan_file] | join("/") }}:
@@ -107,6 +107,14 @@ include:
 {{ load_terraform_template("ami", bastion_ami_configs)}} # AMI - Bastion Instance Image
 {{ load_terraform_template("ec2", bastion_configs)}} # Bastion Intance
 {{ load_terraform_template("eip", eip_configs)}} # Elastic IP (public)
+
+{% set key = {
+  'key_pair': {
+    'name': 'turing',
+    'public_key':  (_auth.ssh_keys|selectattr("name", "equalto", "turing")|map(attribute="public_key")|list)[0]
+  }
+} %}
+{{ load_terraform_template("key_pair", key)}}
 
 # Setup EKS Cluster
 {{ load_terraform_template("eks", eks_configs)}} # EKS Cluster

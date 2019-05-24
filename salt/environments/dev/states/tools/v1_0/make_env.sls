@@ -2,8 +2,9 @@
 
 tools_dir:
     file.directory:
-        - name: {{ _configs.work_dir }}/bin
-        - makedirs: True
+        - name: {{ _configs.tools_work_dir }}/
+        - makedirs: true
+        - failhard: true
 
 unzip:
     pkg.installed

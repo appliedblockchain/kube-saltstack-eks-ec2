@@ -17,5 +17,5 @@
       source_security_group_id = "${module.{{[_pillar.cluster_name, 'control-plane', 'sg'] | join('-')}}.this_security_group_id}"
     },
   ]
-  number_of_computed_ingress_with_source_security_group_id = 2
+  number_of_computed_ingress_with_source_security_group_id = 3
   egress_rules        = ["all-all"]
