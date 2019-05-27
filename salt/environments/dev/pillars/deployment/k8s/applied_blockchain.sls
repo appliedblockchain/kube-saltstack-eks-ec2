@@ -8,4 +8,5 @@ applied_blockchain:
                   port: 8000
                   image: crccheck/hello-world
                   tag: latest # The use of latest is really bad. This field has to go.
+                  domain: k8s-deploy-test.abtech.dev
                   public_access: true
