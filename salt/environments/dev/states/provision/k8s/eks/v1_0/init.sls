@@ -108,14 +108,6 @@ include:
 {{ load_terraform_template("ec2", bastion_configs)}} # Bastion Intance
 {{ load_terraform_template("eip", eip_configs)}} # Elastic IP (public)
 
-{% set key = {
-  'key_pair': {
-    'name': 'turing',
-    'public_key':  (_auth.ssh_keys|selectattr("name", "equalto", "turing")|map(attribute="public_key")|list)[0]
-  }
-} %}
-{{ load_terraform_template("key_pair", key)}}
-
 # Setup EKS Cluster
 {{ load_terraform_template("eks", eks_configs)}} # EKS Cluster
 
