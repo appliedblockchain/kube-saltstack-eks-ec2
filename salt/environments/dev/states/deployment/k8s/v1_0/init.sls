@@ -117,6 +117,24 @@ nginx_ingress_deploy:
         port: {{ app.port }}
 
 {% if app.public_access %}
+{%- set cert_file = [base_app_dir, app.name + "_cert.pem"] | join("/") %}
+{%- set cert_key = [base_app_dir, app.name + "_cert.key"] | join("/") %}
+{{ cert_file }}:
+  file.managed:
+    - template: jinja
+    - source: salt://{{tpldir}}/templates/base64_decode.j2
+    - failhard: true
+    - defaults:
+        content: {{ app.cert64 }}
+
+{{ cert_key }}:
+  file.managed:
+    - template: jinja
+    - source: salt://{{tpldir}}/templates/base64_decode.j2
+    - failhard: true
+    - defaults:
+        content: {{ app.cert_key64 }}
+
 {%- set ingress_service = [base_app_dir, app.name + "_ingress_service.yaml"] | join("/") %}
 {{ ingress_service }}:
   file.managed:
@@ -135,7 +153,10 @@ nginx_ingress_deploy:
         - name: |
             kubectl apply -f {{ deployment_yaml }}
             kubectl apply -f {{ service_yaml }}
-            {% if app.public_access %}kubectl apply -f {{ingress_service}} {% endif %}
+            {% if app.public_access -%}
+            kubectl create secret tls {{ app.domain }} --key {{ cert_key }} --cert {{ cert_file }} 
+            kubectl apply -f {{ingress_service}}
+            {%- endif %}
         - env:
             - PATH: {{ path_var }}
             - KUBECONFIG: {{ kubeconfig }}
