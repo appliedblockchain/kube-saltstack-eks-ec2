@@ -38,6 +38,10 @@ include:
     - tools.install_python3
     - tools.install_awscli
     - tools.install_kubectl
+    - tools.install_git
+
+{% set current_path = salt['environ.get']('PATH') %}
+{% set path_var = current_path + ':' + _configs.tools_work_dir %}
 
 {%- set base_app_dir = [_configs.work_dir, client_id] | join("/") -%}
 {%- set kubeconfig = [base_app_dir, "kubeconfig"] | join("/") %}
@@ -47,11 +51,45 @@ include:
         - name: |
             aws eks --region {{ _configs.region}} update-kubeconfig --name {{ _cluster.cluster_name }} --kubeconfig {{ kubeconfig }}
         - env:
+            - PATH: {{ path_var }}
             - AWS_ACCESS_KEY_ID: {{ _auth.saltstack.aws_access_key_id}}
             - AWS_SECRET_ACCESS_KEY: {{ _auth.saltstack.aws_secret_access_key}}
+        - failhard: true
         - require: 
             - awscli
 
+# Deploy Nginx Ingress
+{% set nginx_service = base_app_dir + "/nginx_service.yaml" %}
+{{ base_app_dir }}/kustomization.yaml:
+  file.managed:
+    - template: jinja
+    - source: salt://{{tpldir}}/templates/nginx_kustomization.yaml
+    - failhard: True
+
+{{ nginx_service }}:
+  file.managed:
+    - template: jinja
+    - source: salt://{{tpldir}}/templates/nginx_service.yaml
+    - failhard: True
+
+nginx_ingress_deploy:
+    cmd.run:
+        - name: |
+            kubectl create namespace ingress-nginx
+            kubectl apply --kustomize {{ base_app_dir }}/
+        - env:
+            - PATH: {{ path_var }}
+            - KUBECONFIG: {{ kubeconfig }}
+            - AWS_ACCESS_KEY_ID: {{ _auth.saltstack.aws_access_key_id}}
+            - AWS_SECRET_ACCESS_KEY: {{ _auth.saltstack.aws_secret_access_key}}
+        - failhard: true
+        - require:
+          - {{kubeconfig}}
+          - git
+
+
+
+# Deploy Apps
 {%- for app in _deploy.apps %}
 {%- set deployment_yaml = [base_app_dir, app.name + "_deployment.yaml"] | join("/") %}
 {%- set service_yaml = [base_app_dir, app.name + "_service.yaml"] | join("/") %}
@@ -75,21 +113,57 @@ include:
     - source: salt://{{tpldir}}/templates/service.yaml.j2
     - failhard: True
     - defaults:
-        provider: {{ _cluster.provider}}
         name: {{ app.name }}
         port: {{ app.port }}
-        {% if app.public_access %}public_access: {{ app.public_access }}{% endif %}
 
+{% if app.public_access %}
+{%- set cert_file = [base_app_dir, app.name + "_cert.pem"] | join("/") %}
+{%- set cert_key = [base_app_dir, app.name + "_cert.key"] | join("/") %}
+{{ cert_file }}:
+  file.managed:
+    - template: jinja
+    - source: salt://{{tpldir}}/templates/base64_decode.j2
+    - failhard: true
+    - defaults:
+        content: {{ app.cert64 }}
+
+{{ cert_key }}:
+  file.managed:
+    - template: jinja
+    - source: salt://{{tpldir}}/templates/base64_decode.j2
+    - failhard: true
+    - defaults:
+        content: {{ app.cert_key64 }}
+
+{%- set ingress_service = [base_app_dir, app.name + "_ingress_service.yaml"] | join("/") %}
+{{ ingress_service }}:
+  file.managed:
+    - template: jinja
+    - source: salt://{{tpldir}}/templates/ingress_service.yaml.j2
+    - failhard: True
+    - defaults:
+        name: {{ app.name }}
+        port: {{ app.port }}
+        domain: {{ app.domain }}
+        path: {% if app.path is defined %}{{app.path}}{% else %}"/"{% endif %}
+{% endif %}
 
 {{ app.name }}_deploy:
     cmd.run:
         - name: |
-            {{ _configs.tools_work_dir }}/kubectl apply -f {{ deployment_yaml }} --kubeconfig {{ kubeconfig }}
-            {{ _configs.tools_work_dir }}/kubectl apply -f {{ service_yaml }} --kubeconfig {{ kubeconfig }}
+            kubectl apply -f {{ deployment_yaml }}
+            kubectl apply -f {{ service_yaml }}
+            {% if app.public_access -%}
+            kubectl create secret tls {{ app.domain }} --key {{ cert_key }} --cert {{ cert_file }} 
+            kubectl apply -f {{ingress_service}}
+            {%- endif %}
         - env:
+            - PATH: {{ path_var }}
+            - KUBECONFIG: {{ kubeconfig }}
             - AWS_ACCESS_KEY_ID: {{ _auth.saltstack.aws_access_key_id}}
             - AWS_SECRET_ACCESS_KEY: {{ _auth.saltstack.aws_secret_access_key}}
         - require:
           - {{kubeconfig}}
+
 
 {%- endfor %}
