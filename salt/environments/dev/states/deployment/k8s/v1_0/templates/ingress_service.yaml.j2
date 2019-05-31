@@ -8,10 +8,10 @@ metadata:
 spec:
   tls:
     - hosts:
-      - {{ domain }}
+      - {{ name }}.{{ domain }}
       secretName: {{ domain }}
   rules:
-  - host: {{ domain }}
+  - host: {{ name }}.{{ domain }}
     http:
       paths:
       - path: {{ path }}

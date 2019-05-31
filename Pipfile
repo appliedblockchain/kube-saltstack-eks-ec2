@@ -12,6 +12,7 @@ pytest = "==3.1.1"
 salt = "==2019.2.0"
 salt-ssh = "==2019.2.0"
 libnacl = "==1.6.1"
+dnsimple = "==1.2.0"
 
 [requires]
 python_version = "3.6"
