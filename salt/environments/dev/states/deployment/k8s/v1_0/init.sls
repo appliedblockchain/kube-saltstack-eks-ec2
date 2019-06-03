@@ -164,6 +164,38 @@ nginx_ingress_deploy:
             - AWS_SECRET_ACCESS_KEY: {{ _auth.saltstack.aws_secret_access_key}}
         - require:
           - {{kubeconfig}}
+          {% if app.public_access -%}
+          - {{ cert_key }}
+          - {{ cert_file }}
+          {%- endif %}
 
+{{ app.name }}_get_external_ip:
+    cmd.run:
+        - name: |
+            kubectl get ing ingress-{{ app.name }} -o yaml | grep "hostname:" | tail -1 | cut -c 17- > {{ _configs.work_dir }}/{{ app.name }}_external_ip
+            [ `cat {{ _configs.work_dir }}/{{ app.name }}_external_ip | wc -c` -gt 1 ]
+        - env:
+            - PATH: {{ path_var }}
+            - KUBECONFIG: {{ kubeconfig }}
+            - AWS_ACCESS_KEY_ID: {{ _auth.saltstack.aws_access_key_id}}
+            - AWS_SECRET_ACCESS_KEY: {{ _auth.saltstack.aws_secret_access_key}}
+        - require:
+          - {{kubeconfig}}
+          - {{ ingress_service }}
+          - {{ app.name }}_deploy
+        - retry: # On full stack deploy, ELB may take a while to create
+            until: "[ `cat {{ _configs.work_dir }}/{{ app.name }}_external_ip | wc -c` -gt 1 ]"
+            attempts: 4
+            interval: 60
+            splay: 30
+
+{{ app.name }}_dns:
+  dnsimple.cname_present:
+    - client_id: {{ client_id }}
+    - domain: {{ app.domain }}
+    - name: {{ app.name }}
+    - content_file: {{ _configs.work_dir+"/"+ app.name + "_external_ip" }}
+    - require:
+      - {{ app.name }}_get_external_ip
 
 {%- endfor %}
