@@ -14,12 +14,6 @@ client_id_pillar:
     - makedirs: true
     - clean: true
 
-deployment_test_pillar:
-  test.check_pillar:
-    - present:
-      - {{ client_id }}:deployment:k8s
-      - {{ client_id }}:provision:k8s:cluster_name
-    - failhard: true
 {%- set _cluster = salt.pillar.get([client_id, "provision", "k8s"] | join(":")) %}
 {%- set _deploy = salt.pillar.get([client_id, "deployment", "k8s"] | join(":")) %}
 
@@ -31,6 +25,14 @@ authentication_test_pillar:
       - {{ client_id }}:authentication:{{ _cluster.provider }}:saltstack:aws_secret_access_key
     - failhard: true
 {%- endif %}
+
+domain_test_pillar:
+  test.check_pillar:
+    - present:
+      - {{ client_id }}:deployment:k8s:domain:name
+      - {{ client_id }}:deployment:k8s:domain:cert64
+      - {{ client_id }}:deployment:k8s:domain:cert_key64
+    - failhard: true
 
 {%- set _auth = salt.pillar.get([client_id, 'authentication', _cluster.provider]|join(':')) %}
 
@@ -87,12 +89,34 @@ nginx_ingress_deploy:
           - {{kubeconfig}}
           - git
 
+{%- set apps_namespace = client_id|replace('_','-') %}
 
+# Setup Certificates
+{%- set cert_file = [base_app_dir, client_id + "_cert.pem"] | join("/") %}
+{%- set cert_key = [base_app_dir, client_id + "_cert.key"] | join("/") %}
+{{ cert_file }}:
+  file.managed:
+    - template: jinja
+    - source: salt://{{tpldir}}/templates/base64_decode.j2
+    - failhard: true
+    - defaults:
+        content: {{ _deploy.domain.cert64 }}
+
+{{ cert_key }}:
+  file.managed:
+    - template: jinja
+    - source: salt://{{tpldir}}/templates/base64_decode.j2
+    - failhard: true
+    - defaults:
+        content: {{ _deploy.domain.cert_key64 }}
 
 # Deploy Apps
 {%- for app in _deploy.apps %}
 {%- set deployment_yaml = [base_app_dir, app.name + "_deployment.yaml"] | join("/") %}
 {%- set service_yaml = [base_app_dir, app.name + "_service.yaml"] | join("/") %}
+{%- if app.registry is defined -%}
+{%- set regcred_name = app.name + "-regcred" -%}
+{%- endif %}
 
 {{ deployment_yaml }}:
   file.managed:
@@ -106,6 +130,9 @@ nginx_ingress_deploy:
         image: {{ app.image }}
         tag: {{ app.tag }}
         port: {{ app.port }}
+        {% if app.registry is defined -%}
+        regsecret: {{ regcred_name }}
+        {%- endif %}
 
 {{ service_yaml }}:
   file.managed:
@@ -116,86 +143,84 @@ nginx_ingress_deploy:
         name: {{ app.name }}
         port: {{ app.port }}
 
-{% if app.public_access %}
-{%- set cert_file = [base_app_dir, app.name + "_cert.pem"] | join("/") %}
-{%- set cert_key = [base_app_dir, app.name + "_cert.key"] | join("/") %}
-{{ cert_file }}:
-  file.managed:
-    - template: jinja
-    - source: salt://{{tpldir}}/templates/base64_decode.j2
-    - failhard: true
-    - defaults:
-        content: {{ app.cert64 }}
+{{ app.name }}_deploy:
+    cmd.run:
+        - name: |
+            kubectl create namespace {{ apps_namespace }}
+            {% if app.registry is defined -%}
+            kubectl create secret docker-registry {{ regcred_name }} --docker-server={{app.registry.server}} --docker-username={{app.registry.username}} --docker-password={{app.registry.password}} -n {{ apps_namespace }}
+            {%- endif %}
+            kubectl apply -f {{ deployment_yaml }} -n {{ apps_namespace }}
+            kubectl apply -f {{ service_yaml }} -n {{ apps_namespace }}
+        - env:
+            - PATH: {{ path_var }}
+            - KUBECONFIG: {{ kubeconfig }}
+            - AWS_ACCESS_KEY_ID: {{ _auth.saltstack.aws_access_key_id}}
+            - AWS_SECRET_ACCESS_KEY: {{ _auth.saltstack.aws_secret_access_key}}
+        - require:
+          - {{kubeconfig}}
 
-{{ cert_key }}:
-  file.managed:
-    - template: jinja
-    - source: salt://{{tpldir}}/templates/base64_decode.j2
-    - failhard: true
-    - defaults:
-        content: {{ app.cert_key64 }}
+{%- endfor %}
 
-{%- set ingress_service = [base_app_dir, app.name + "_ingress_service.yaml"] | join("/") %}
+{%- set ingress_service = [base_app_dir, client_id + "_ingress_service.yaml"] | join("/") %}
+{%- set ingress_name = "ingress-" + (client_id|replace('_','-')) %}
 {{ ingress_service }}:
   file.managed:
     - template: jinja
     - source: salt://{{tpldir}}/templates/ingress_service.yaml.j2
     - failhard: True
     - defaults:
-        name: {{ app.name }}
-        port: {{ app.port }}
-        domain: {{ app.domain }}
-        path: {% if app.path is defined %}{{app.path}}{% else %}"/"{% endif %}
-{% endif %}
+        apps: {{ _deploy.apps }}
+        ingress: {{ ingress_name }}
+        domain: {{ _deploy.domain.name }}
+    - require:
+      - domain_test_pillar
 
-{{ app.name }}_deploy:
+{{ ingress_service }}_deploy:
     cmd.run:
         - name: |
-            kubectl apply -f {{ deployment_yaml }}
-            kubectl apply -f {{ service_yaml }}
-            {% if app.public_access -%}
-            kubectl create secret tls {{ app.domain }} --key {{ cert_key }} --cert {{ cert_file }} 
-            kubectl apply -f {{ingress_service}}
-            {%- endif %}
+            kubectl create secret tls {{ _deploy.domain.name }} --key {{ cert_key }} --cert {{ cert_file }} -n {{ apps_namespace }}
+            kubectl apply -f {{ ingress_service }} -n {{ apps_namespace }}
         - env:
             - PATH: {{ path_var }}
             - KUBECONFIG: {{ kubeconfig }}
             - AWS_ACCESS_KEY_ID: {{ _auth.saltstack.aws_access_key_id}}
             - AWS_SECRET_ACCESS_KEY: {{ _auth.saltstack.aws_secret_access_key}}
         - require:
-          - {{kubeconfig}}
-          {% if app.public_access -%}
+          - {{ kubeconfig }}
           - {{ cert_key }}
           - {{ cert_file }}
-          {%- endif %}
+          - {{ ingress_service }}
+          {%- for app in _deploy.apps %}
+          - {{ app.name }}_deploy
+          {%- endfor %}
 
-{{ app.name }}_get_external_ip:
+{{ client_id }}_get_external_ip:
     cmd.run:
         - name: |
-            kubectl get ing ingress-{{ app.name }} -o yaml | grep "hostname:" | tail -1 | cut -c 17- > {{ _configs.work_dir }}/{{ app.name }}_external_ip
-            [ `cat {{ _configs.work_dir }}/{{ app.name }}_external_ip | wc -c` -gt 1 ]
+            kubectl get ing {{ ingress_name }} -n {{ apps_namespace }} -o yaml | grep "hostname:" | tail -1 | cut -c 17- > {{ _configs.work_dir }}/{{ client_id }}_external_ip
+            [ `cat {{ _configs.work_dir }}/{{ client_id }}_external_ip | wc -c` -gt 1 ]
         - env:
             - PATH: {{ path_var }}
             - KUBECONFIG: {{ kubeconfig }}
             - AWS_ACCESS_KEY_ID: {{ _auth.saltstack.aws_access_key_id}}
             - AWS_SECRET_ACCESS_KEY: {{ _auth.saltstack.aws_secret_access_key}}
         - require:
-          - {{kubeconfig}}
+          - {{ kubeconfig }}
           - {{ ingress_service }}
-          - {{ app.name }}_deploy
         - retry: # On full stack deploy, ELB may take a while to create
-            until: "[ `cat {{ _configs.work_dir }}/{{ app.name }}_external_ip | wc -c` -gt 1 ]"
-            attempts: 4
+            attempts: 7
             interval: 60
             splay: 30
 
-{{ app.name }}_dns:
+{% for app in _deploy.apps %}
+{{ app.name}}_{{ client_id }}_dns:
   dnsimple.cname_present:
     - client_id: {{ client_id }}
-    - domain: {{ app.domain }}
+    - domain: {{ _deploy.domain.name }}
     - name: {{ app.name }}
-    - content_file: {{ _configs.work_dir+"/"+ app.name + "_external_ip" }}
+    - content_file: {{ _configs.work_dir+"/"+ client_id + "_external_ip" }}
     - require:
-      - {{ app.name }}_get_external_ip
-
-{%- endfor %}
+      - {{ client_id }}_get_external_ip
+      - domain_test_pillar
+{% endfor %}
