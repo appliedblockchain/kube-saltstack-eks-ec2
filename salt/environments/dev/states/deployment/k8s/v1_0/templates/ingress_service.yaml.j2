@@ -1,20 +1,28 @@
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
-  name: ingress-{{ name }}
+  name: {{ ingress }}
   annotations:
     # use the shared ingress-nginx
     kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: 360
+    nginx.ingress.kubernetes.io/proxy-send-timeout: 360
+    nginx.ingress.kubernetes.io/proxy-read-timeout: 360
+    nginx.ingress.kubernetes.io/use-proxy-protocol: "true"
 spec:
   tls:
     - hosts:
-      - {{ name }}.{{ domain }}
+    {%- for app in apps %}
+      - {{ app.name }}.{{ domain }}
+    {%- endfor %}
       secretName: {{ domain }}
   rules:
-  - host: {{ name }}.{{ domain }}
-    http:
-      paths:
-      - path: {{ path }}
-        backend:
-          serviceName: {{ name }}
-          servicePort: {{ port }}
+  {%- for app in apps %}
+    - host: {{ app.name }}.{{ domain }}
+      http:
+        paths:
+        - path: {% if app.path is defined %}{{app.path}}{% else %}/{% endif %}
+          backend:
+            serviceName: {{ app.name }}
+            servicePort: {{ app.port }}
+  {%- endfor %}

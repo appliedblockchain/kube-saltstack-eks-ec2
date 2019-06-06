@@ -5,6 +5,11 @@
       source_security_group_id = "${module.{{[_pillar.cluster_name, 'control-plane', 'sg'] | join('-')}}.this_security_group_id}"
     },
     {
+      rule                     = "all-all"
+      description              = "Inter worker access"
+      source_security_group_id = "${module.{{[_pillar.cluster_name, 'workers', 'sg'] | join('-')}}.this_security_group_id}"
+    },
+    {
       rule                     = "ssh-tcp"
       description              = "Allow access to workers from bastion"
       source_security_group_id = "${module.{{[_pillar.cluster_name, 'bastion', 'sg'] | join('-')}}.this_security_group_id}"
@@ -17,5 +22,5 @@
       source_security_group_id = "${module.{{[_pillar.cluster_name, 'control-plane', 'sg'] | join('-')}}.this_security_group_id}"
     },
   ]
-  number_of_computed_ingress_with_source_security_group_id = 3
+  number_of_computed_ingress_with_source_security_group_id = 4
   egress_rules        = ["all-all"]

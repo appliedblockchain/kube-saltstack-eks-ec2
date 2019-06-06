@@ -6,7 +6,7 @@ applied_blockchain:
             bastion_size: "t2.small"
             bastion_default_ssh_key: turing
             workers:
-                size: "t2.small"
+                size: "c5.large"
                 count: 2
             network:
                 cidr: 10.0.0.0/16

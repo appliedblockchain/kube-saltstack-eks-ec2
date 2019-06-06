@@ -15,7 +15,13 @@ spec:
         app: {{ name }}
     spec:
       containers:
-      - name: {{ name }}
-        image: {{ image }}:{{ tag }} 
-        ports:
-        - containerPort: {{ port }}
+        - name: {{ name }}
+          image: {{ image }}:{{ tag }} 
+          ports:
+          - containerPort: {{ port }}
+      {% if regsecret is defined -%}
+      imagePullSecrets:
+        - name: {{ regsecret }}
+      {%- endif %}
+
+
