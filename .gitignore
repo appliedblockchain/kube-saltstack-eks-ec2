@@ -1,3 +1,6 @@
+# secret
+nacl.sk
+
 # Vagrant files
 vagrant_overrides.yaml
 .vagrant/*
