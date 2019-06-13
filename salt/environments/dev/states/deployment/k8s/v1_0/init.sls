@@ -119,7 +119,7 @@ nginx_ingress_deploy:
     - source: salt://{{tpldir}}/templates/efs.yaml.j2
     - failhard: true
     - defaults:
-        system_id: {{ salt.aws_utils.get_efs_system_id(creation_token=_cluster.cluster_name+'-shared-storage',client_id=client_id) }}
+        system_id: {{ salt.aws_utils.get_efs_system_id(creation_token=_cluster.cluster_name+'-shared-storage',client_id=client_id,region=_configs.region) }}
         region: {{ _configs.region }}
         namespace: {{ apps_namespace }}
 
