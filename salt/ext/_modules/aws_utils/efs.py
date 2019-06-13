@@ -9,7 +9,6 @@ log = logging.getLogger(__name__)
 class EFSUtils(object):
 
     def __init__(self, key_id, secret_key, region):
-        region = 'eu-west-1'
         self.efs_client = boto3.client(
             'efs',
             aws_access_key_id=key_id,
