@@ -54,7 +54,7 @@ include:
     file.managed:
         - require:
             - tools_dir
-            
+
 
 {% from "provision/terraform/common/functions.j2" import load_terraform_template with context %}
 
@@ -73,13 +73,17 @@ include:
         'rules': tpldir + '/templates/sg_rules/' + sg + '.tf'
     }}) %}
 {% endfor %}
+
+
+
+{% set efs_name = _pillar.cluster_name + '-shared-storage' %}
 {% set efs_configs = {'efs': {
-    'name': _pillar.cluster_name + '-shared-storage',
+    'name': efs_name,
     'vpc': vpc_configs.vpc.name,
     'cluster_name': _pillar.cluster_name,
     'subnets':  vpc_configs.vpc.subnets.private,
     'tags': {
-        'Name': _pillar.cluster_name + + '-shared-storage',
+        'Name': efs_name,
         'provisioned_by': 'applied_blockchain',
         'provisioner': 'terraform'
     }
@@ -99,7 +103,7 @@ include:
       username: {{ _pillar.bastion_default_ssh_key }}
       public_key: {{ (_auth.ssh_keys|selectattr("name", "equalto", _pillar.bastion_default_ssh_key)|map(attribute="public_key")|list)[0] }}
 
-# Setup Provider 
+# Setup Provider
 {{ load_terraform_template("provider", provider_configs) }}
 
 # Terraform Backend
