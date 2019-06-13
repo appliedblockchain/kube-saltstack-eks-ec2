@@ -10,5 +10,8 @@ def _confs(client_id):
     }
 
 
-def get_efs_system_id(creation_token, client_id):
-    return EFSUtils(key_id=_confs(client_id).get('key_id'), secret_key=_confs(client_id).get('secret_key')).get_system_id(creation_token=creation_token)
+def get_efs_system_id(creation_token, client_id, region):
+    return EFSUtils(
+        key_id=_confs(client_id).get('key_id'), secret_key=_confs(client_id).get('secret_key'),
+        region=region
+    ).get_system_id(creation_token=creation_token)
