@@ -73,6 +73,17 @@ include:
         'rules': tpldir + '/templates/sg_rules/' + sg + '.tf'
     }}) %}
 {% endfor %}
+{% set efs_configs = {'efs': {
+    'name': _pillar.cluster_name + '-shared-storage',
+    'vpc': vpc_configs.vpc.name,
+    'cluster_name': _pillar.cluster_name,
+    'subnets':  vpc_configs.vpc.subnets.private,
+    'tags': {
+        'Name': _pillar.cluster_name + + '-shared-storage',
+        'provisioned_by': 'applied_blockchain',
+        'provisioner': 'terraform'
+    }
+}} %}
 {% from configs_dir + 'bastion_ami_configs.j2' import bastion_ami_configs with context %}
 {% from configs_dir + 'bastion_configs.j2' import bastion_configs with context %}
 {% from configs_dir + 'eip_configs.j2' import eip_configs with context %}
@@ -110,6 +121,9 @@ include:
 
 # Setup EKS Cluster
 {{ load_terraform_template("eks", eks_configs)}} # EKS Cluster
+
+# Setup EFS Storage
+{{ load_terraform_template("efs", efs_configs) }}
 
 # Generate Bastion Cloud-init
 {{ bastion_configs.ec2.cloud_init_file }}:
