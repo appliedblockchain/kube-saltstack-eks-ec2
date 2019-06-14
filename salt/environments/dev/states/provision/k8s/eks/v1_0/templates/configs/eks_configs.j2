@@ -8,5 +8,7 @@
         'workers_instance_count': _pillar.workers.count,
         'workers_user_data': 'workers_user_data.conf',
         'tools_dir': _configs.tools_work_dir,
+        'aws_access_key_id': _auth.saltstack.aws_access_key_id,
+        'aws_secret_access_key': _auth.saltstack.aws_secret_access_key,
     }
 } -%}

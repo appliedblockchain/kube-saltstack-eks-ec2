@@ -57,7 +57,7 @@ include:
             - AWS_ACCESS_KEY_ID: {{ _auth.saltstack.aws_access_key_id}}
             - AWS_SECRET_ACCESS_KEY: {{ _auth.saltstack.aws_secret_access_key}}
         - failhard: true
-        - require: 
+        - require:
             - awscli
 
 # Deploy Nginx Ingress
@@ -110,18 +110,52 @@ nginx_ingress_deploy:
     - defaults:
         content: {{ _deploy.domain.cert_key64 }}
 
+# Setup EFS Provisioner
+# https://github.com/kubernetes-incubator/external-storage/tree/master/aws/efs
+{%- set efs_yaml = [base_app_dir, client_id + "_efs.yaml"] | join("/") %}
+{{ efs_yaml }}:
+  file.managed:
+    - template: jinja
+    - source: salt://{{tpldir}}/templates/efs.yaml.j2
+    - failhard: true
+    - defaults:
+        system_id: {{ salt.aws_utils.get_efs_system_id(creation_token=_cluster.cluster_name+'-shared-storage',client_id=client_id,region=_configs.region) }}
+        region: {{ _configs.region }}
+        namespace: {{ apps_namespace }}
+
+{{ efs_yaml }}_deploy:
+    cmd.run:
+        - name: |
+            kubectl create namespace {{ apps_namespace }}
+            kubectl apply -f {{ efs_yaml }} -n {{ apps_namespace }}
+        - env:
+            - PATH: {{ path_var }}
+            - KUBECONFIG: {{ kubeconfig }}
+            - AWS_ACCESS_KEY_ID: {{ _auth.saltstack.aws_access_key_id}}
+            - AWS_SECRET_ACCESS_KEY: {{ _auth.saltstack.aws_secret_access_key}}
+        - require:
+          - {{ kubeconfig }}
+
 # Deploy Apps
 {%- for app in _deploy.apps %}
-{%- set deployment_yaml = [base_app_dir, app.name + "_deployment.yaml"] | join("/") %}
+{%- if app.storage is defined %}
+  {%- set deploy_yaml = [base_app_dir, app.name + "_statefulset.yaml"] | join("/") %}
+{%- else %}
+  {%- set deploy_yaml = [base_app_dir, app.name + "_deployment.yaml"] | join("/") %}
+{%- endif %}
 {%- set service_yaml = [base_app_dir, app.name + "_service.yaml"] | join("/") %}
 {%- if app.registry is defined -%}
 {%- set regcred_name = app.name + "-regcred" -%}
 {%- endif %}
 
-{{ deployment_yaml }}:
+{{ deploy_yaml }}:
   file.managed:
     - template: jinja
+    {% if app.storage is defined -%}
+    - source: salt://{{tpldir}}/templates/statefulset.yaml.j2
+    {%- else %}
     - source: salt://{{tpldir}}/templates/deployment.yaml.j2
+    {%- endif %}
     - failhard: True
     - defaults:
         provider: {{ _cluster.provider}}
@@ -132,6 +166,9 @@ nginx_ingress_deploy:
         port: {{ app.port }}
         {% if app.registry is defined -%}
         regsecret: {{ regcred_name }}
+        {%- endif %}
+        {% if app.storage is defined -%}
+        storage: {{ app.storage }}
         {%- endif %}
 
 {{ service_yaml }}:
@@ -146,11 +183,10 @@ nginx_ingress_deploy:
 {{ app.name }}_deploy:
     cmd.run:
         - name: |
-            kubectl create namespace {{ apps_namespace }}
             {% if app.registry is defined -%}
             kubectl create secret docker-registry {{ regcred_name }} --docker-server={{app.registry.server}} --docker-username={{app.registry.username}} --docker-password={{app.registry.password}} -n {{ apps_namespace }}
             {%- endif %}
-            kubectl apply -f {{ deployment_yaml }} -n {{ apps_namespace }}
+            kubectl apply -f {{ deploy_yaml }} -n {{ apps_namespace }}
             kubectl apply -f {{ service_yaml }} -n {{ apps_namespace }}
         - env:
             - PATH: {{ path_var }}
@@ -158,7 +194,10 @@ nginx_ingress_deploy:
             - AWS_ACCESS_KEY_ID: {{ _auth.saltstack.aws_access_key_id}}
             - AWS_SECRET_ACCESS_KEY: {{ _auth.saltstack.aws_secret_access_key}}
         - require:
-          - {{kubeconfig}}
+          - {{ kubeconfig }}
+        {%- if app.storage is defined %}
+          - {{ efs_yaml }}_deploy
+        {%- endif %}
 
 {%- endfor %}
 
@@ -198,8 +237,8 @@ nginx_ingress_deploy:
 {{ client_id }}_get_external_ip:
     cmd.run:
         - name: |
-            kubectl get ing {{ ingress_name }} -n {{ apps_namespace }} -o yaml | grep "hostname:" | tail -1 | cut -c 17- > {{ _configs.work_dir }}/{{ client_id }}_external_ip
-            [ `cat {{ _configs.work_dir }}/{{ client_id }}_external_ip | wc -c` -gt 1 ]
+            kubectl get ing {{ ingress_name }} -n {{ apps_namespace }} -o yaml | grep "hostname:" | tail -1 | cut -c 17- > {{ _configs.work_dir }}/{{ client_id }}/external_ip
+            [ `cat {{ _configs.work_dir }}/{{ client_id }}/external_ip | wc -c` -gt 1 ]
         - env:
             - PATH: {{ path_var }}
             - KUBECONFIG: {{ kubeconfig }}
@@ -209,17 +248,17 @@ nginx_ingress_deploy:
           - {{ kubeconfig }}
           - {{ ingress_service }}
         - retry: # On full stack deploy, ELB may take a while to create
-            attempts: 7
+            attempts: 10
             interval: 60
             splay: 30
 
 {% for app in _deploy.apps %}
-{{ app.name}}_{{ client_id }}_dns:
+{{ app.name }}_{{ client_id }}_dns:
   dnsimple.cname_present:
     - client_id: {{ client_id }}
     - domain: {{ _deploy.domain.name }}
     - name: {{ app.name }}
-    - content_file: {{ _configs.work_dir+"/"+ client_id + "_external_ip" }}
+    - content_file: {{ _configs.work_dir+"/"+ client_id + "/external_ip" }}
     - require:
       - {{ client_id }}_get_external_ip
       - domain_test_pillar

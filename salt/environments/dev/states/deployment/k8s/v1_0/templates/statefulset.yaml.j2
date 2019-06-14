@@ -1,0 +1,38 @@
+apiVersion: apps/v1 
+kind: StatefulSet
+metadata:
+  name: {{ name }}
+  labels:
+    app: {{ name }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ name }}
+  serviceName: "{{ name }}"
+  replicas: {{ replicas }}
+  template:
+    metadata:
+      labels:
+        app: {{ name }}
+    spec:
+      {% if regsecret is defined -%}
+      imagePullSecrets:
+        - name: {{ regsecret }}
+      {%- endif %}
+      containers:
+        - name: {{ name }}
+          image: {{ image }}:{{ tag }} 
+          ports:
+          - containerPort: {{ port }}
+          volumeMounts:
+          - name: {{ name }}
+            mountPath: {{ storage.mount_path }}
+  volumeClaimTemplates:
+  - metadata:
+      name: {{ name }}
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: "aws-efs"
+      resources:
+        requests:
+          storage: {{ storage.size }}

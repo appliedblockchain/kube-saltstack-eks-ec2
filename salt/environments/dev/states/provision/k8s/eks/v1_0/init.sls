@@ -54,7 +54,7 @@ include:
     file.managed:
         - require:
             - tools_dir
-            
+
 
 {% from "provision/terraform/common/functions.j2" import load_terraform_template with context %}
 
@@ -73,6 +73,21 @@ include:
         'rules': tpldir + '/templates/sg_rules/' + sg + '.tf'
     }}) %}
 {% endfor %}
+
+
+
+{% set efs_name = _pillar.cluster_name + '-shared-storage' %}
+{% set efs_configs = {'efs': {
+    'name': efs_name,
+    'vpc': vpc_configs.vpc.name,
+    'cluster_name': _pillar.cluster_name,
+    'subnets':  vpc_configs.vpc.subnets.private,
+    'tags': {
+        'Name': efs_name,
+        'provisioned_by': 'applied_blockchain',
+        'provisioner': 'terraform'
+    }
+}} %}
 {% from configs_dir + 'bastion_ami_configs.j2' import bastion_ami_configs with context %}
 {% from configs_dir + 'bastion_configs.j2' import bastion_configs with context %}
 {% from configs_dir + 'eip_configs.j2' import eip_configs with context %}
@@ -88,7 +103,7 @@ include:
       username: {{ _pillar.bastion_default_ssh_key }}
       public_key: {{ (_auth.ssh_keys|selectattr("name", "equalto", _pillar.bastion_default_ssh_key)|map(attribute="public_key")|list)[0] }}
 
-# Setup Provider 
+# Setup Provider
 {{ load_terraform_template("provider", provider_configs) }}
 
 # Terraform Backend
@@ -110,6 +125,9 @@ include:
 
 # Setup EKS Cluster
 {{ load_terraform_template("eks", eks_configs)}} # EKS Cluster
+
+# Setup EFS Storage
+{{ load_terraform_template("efs", efs_configs) }}
 
 # Generate Bastion Cloud-init
 {{ bastion_configs.ec2.cloud_init_file }}:

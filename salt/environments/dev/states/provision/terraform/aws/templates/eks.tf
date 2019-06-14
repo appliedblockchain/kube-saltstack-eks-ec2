@@ -41,5 +41,9 @@ resource "null_resource" "update_config_map_aws_auth" {
   provisioner "local-exec" {
     working_dir = "${path.module}"
     command = "{{ configs.eks.tools_dir }}/kubectl --kubeconfig kubeconfig_{{ configs.eks.name }} apply -f config-map-aws-auth_{{ configs.eks.name }}.yaml"
+    environment = {
+      AWS_ACCESS_KEY_ID = "{{ configs.eks.aws_access_key_id }}"
+      AWS_SECRET_ACCESS_KEY = "{{ configs.eks.aws_secret_access_key }}"
+    }
   }
 }
