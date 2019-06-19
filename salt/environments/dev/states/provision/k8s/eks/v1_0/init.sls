@@ -38,6 +38,19 @@ k8s_authentication_test_pillar:
     - failhard: true
 {%- set _auth = salt.pillar.get([client_id, 'authentication', _pillar.provider]|join(':')) -%}
 
+{%- set cluster_storage = salt.pillar.get([client_id, 'provision:k8s', 'cluster_storage']|join(':'), none) -%}
+
+{%- set database = salt.pillar.get([client_id, 'provision:k8s', 'database']|join(':'), none) -%}
+{%- if database is defined %}
+k8s_database_test_pillar:
+  test.check_pillar:
+    - present:
+      - {{ client_id }}:provision:k8s:database:instance_size
+      - {{ client_id }}:provision:k8s:database:storage_size
+      - {{ client_id }}:provision:k8s:database:username
+      - {{ client_id }}:provision:k8s:database:password
+    - failhard: true
+{%- endif -%}
 
 {%- set configs_dir = tpldir + '/templates/configs/'-%}
 {%- set common_configs_dir = 'provision/terraform/'+_pillar.provider+'/configs/'-%}
@@ -66,7 +79,7 @@ include:
 }) %}
 {% from configs_dir + 'vpc_configs.j2' import vpc_configs with context %}
 {% set security_groups = [] %}
-{% for sg in ['control-plane','workers','bastion'] %}
+{% for sg in ['control-plane','workers','bastion','rds'] %}
     {% do security_groups.append({'security_group': {
         'name': [_pillar.cluster_name, sg, 'sg'] | join('-'),
         'vpc': vpc_configs.vpc.name,
@@ -74,8 +87,7 @@ include:
     }}) %}
 {% endfor %}
 
-
-
+{%- if cluster_storage is defined and cluster_storage  -%}
 {% set efs_name = _pillar.cluster_name + '-shared-storage' %}
 {% set efs_configs = {'efs': {
     'name': efs_name,
@@ -88,10 +100,15 @@ include:
         'provisioner': 'terraform'
     }
 }} %}
+{%- endif -%}
+
 {% from configs_dir + 'bastion_ami_configs.j2' import bastion_ami_configs with context %}
 {% from configs_dir + 'bastion_configs.j2' import bastion_configs with context %}
 {% from configs_dir + 'eip_configs.j2' import eip_configs with context %}
 {% from configs_dir + 'eks_configs.j2' import eks_configs with context %}
+{%- if database is defined -%}
+{% from configs_dir + 'rds_configs.j2' import rds_configs with context %}
+{%- endif -%}
 
 # Workers User data file (cloud init)
 {{ [_configs.work_dir, client_id, 'workers_user_data.conf' ] | join('/') }}:
@@ -127,7 +144,14 @@ include:
 {{ load_terraform_template("eks", eks_configs)}} # EKS Cluster
 
 # Setup EFS Storage
+{%- if cluster_storage is defined and cluster_storage  %}
 {{ load_terraform_template("efs", efs_configs) }}
+{%- endif %}
+
+# Setup EFS Storage
+{%- if database is defined %}
+{{ load_terraform_template("rds", rds_configs) }}
+{%- endif %}
 
 # Generate Bastion Cloud-init
 {{ bastion_configs.ec2.cloud_init_file }}:
