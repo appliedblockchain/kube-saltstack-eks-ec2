@@ -5,7 +5,7 @@ client_id_pillar:
       - client_id
     - failhard: true
 {%- set client_id = pillar.get("client_id") %}
-{% import_yaml ("provision/tools/"+_configs.tools_version+"/defaults.yaml") as _tools_configs %}
+{% import_yaml ("tools/"+_configs.tools_version+"/defaults.yaml") as _tools_configs %}
 {% do _configs.update(_tools_configs) %}
 
 # Make sure client work directory exists and it's empty
@@ -37,8 +37,8 @@ k8s_authentication_test_pillar:
 # Setup Tools
 
 include:
-  - provision.tools.install_terraform
-  - provision.tools.install_aws_iam_authenticator
+  - tools.install_terraform
+  - tools.install_aws_iam_authenticator
 
 # Make sure plan file exists in FS so you can simply append to it
 {{ [_configs.work_dir, client_id, _configs.tf_plan_file] | join("/") }}:
