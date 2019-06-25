@@ -4,7 +4,7 @@
         'client_id': client_id,
         'username': database.username,
         'password': database.password,
-        'subnet_ids': "[\"${module." + vpc_configs.vpc.name + ".private_subnets}\"]",
+        'subnet_ids': "module." + vpc_configs.vpc.name + ".private_subnets",
         'instance_size': database.instance_size,
         'size_gb': database.storage_size,
         'security_groups_ids': "[\"${module." + ([_pillar.cluster_name, 'rds', 'sg'] | join('-'))+".this_security_group_id}\"]",

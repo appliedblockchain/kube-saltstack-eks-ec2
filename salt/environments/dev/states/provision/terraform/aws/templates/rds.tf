@@ -1,11 +1,11 @@
 module "{{ configs.rds.name }}-rds" {
   source = "terraform-aws-modules/rds/aws"
-  version = "~> 1.0"
+  version = "~> 2.0"
 
   identifier = "{{ configs.rds.name }}-postgres"
 
   engine            = "postgres"
-  engine_version    = "9.6.9"
+  engine_version    = "9.6.11"
   instance_class    = "{{ configs.rds.instance_size }}"
   allocated_storage = {{ configs.rds.size_gb }}
   storage_encrypted = false
@@ -16,6 +16,8 @@ module "{{ configs.rds.name }}-rds" {
   port     = "5432"
 
   vpc_security_group_ids = {{ configs.rds.security_groups_ids }}
+
+  publicly_accessible = "true"
 
   maintenance_window = "Mon:00:00-Mon:03:00"
   backup_window      = "03:00-06:00"
