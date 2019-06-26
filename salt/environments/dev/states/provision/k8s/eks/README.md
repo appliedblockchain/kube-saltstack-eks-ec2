@@ -6,7 +6,7 @@ Executing `EKS` state generates the corresponding *HCL*. Since this is a sensiti
 To execute the state simply run
 
 ```
-$ salt-call state.apply provision.k8s.eks.latest pillar='{"client_id":"applied_blockchain"}'
+$ salt-call state.apply provision.k8s.eks.latest pillar='{"client_id":"applied_blockchain"}' -l info
 ```
 
 **Note:** Replace `client_id` with the appropriate value.

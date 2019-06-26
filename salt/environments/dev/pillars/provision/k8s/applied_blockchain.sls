@@ -5,6 +5,12 @@ applied_blockchain:
             cluster_name: ab-test
             bastion_size: "t2.small"
             bastion_default_ssh_key: turing
+            cluster_storage: true
+            database:
+                instance_size: "db.t2.large"
+                storage_size: 5 # GB
+                username: abuser # since this cluster if for process testing purposes the credentials will be in plain text
+                password: abpass1234
             workers:
                 size: "c5.large"
                 count: 2
