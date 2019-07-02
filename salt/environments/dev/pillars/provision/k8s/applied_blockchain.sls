@@ -7,12 +7,12 @@ applied_blockchain:
             bastion_default_ssh_key: turing
             cluster_storage: true
             database:
-                instance_size: "db.t2.large"
+                instance_size: "db.t2.small"
                 storage_size: 5 # GB
                 username: abuser # since this cluster if for process testing purposes the credentials will be in plain text
                 password: abpass1234
             workers:
-                size: "c5.large"
+                size: "t2.medium"
                 count: 2
             network:
                 cidr: 10.0.0.0/16

@@ -148,6 +148,21 @@ nginx_ingress_deploy:
 {%- set regcred_name = app.name + "-regcred" -%}
 {%- endif %}
 
+# Set container env_vars
+{%- set env_vars = {} -%}
+{%- if app.requires_database is defined and app.requires_database -%}
+  {%- set rds_name = _cluster.cluster_name|replace('-','') -%} # As defined in rds_configs.j2
+  {%- set rds_identifier = _cluster.cluster_name|replace('-','') + '-postgres' -%} # As defined in rds.tf
+  {% do env_vars.update({'DB_CONNECTION': 'postgresql://'+ salt.aws_utils.get_rds_endpoint(db_identifier=rds_identifier, client_id=client_id, region=_configs.region) +':'+ _cluster.database.username +'@'+ _cluster.database.password +':5432/'+ rds_name}) %}
+{%- endif -%}
+
+{%- if app.static_env_vars is defined %}
+{%- for var in app.static_env_vars %}
+{% do env_vars.update({var.name: var.value}) %}
+{%- endfor %}
+{%- endif %}
+
+
 {{ deploy_yaml }}:
   file.managed:
     - template: jinja
@@ -164,6 +179,7 @@ nginx_ingress_deploy:
         image: {{ app.image }}
         tag: {{ app.tag }}
         port: {{ app.port }}
+        env_vars: {{ env_vars }}
         {% if app.registry is defined -%}
         regsecret: {{ regcred_name }}
         {%- endif %}
