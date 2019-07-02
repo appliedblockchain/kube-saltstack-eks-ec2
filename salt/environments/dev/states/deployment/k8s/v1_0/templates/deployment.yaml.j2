@@ -16,9 +16,16 @@ spec:
     spec:
       containers:
         - name: {{ name }}
-          image: {{ image }}:{{ tag }} 
+          image: {{ image }}:{{ tag }}
           ports:
           - containerPort: {{ port }}
+      {%- if env_vars is defined %}
+          env:
+        {%- for key, value in env_vars.items() %}
+            - name: {{ key }}
+              value: {{ value}}
+        {%- endfor %}
+      {%- endif %}
       {% if regsecret is defined -%}
       imagePullSecrets:
         - name: {{ regsecret }}
