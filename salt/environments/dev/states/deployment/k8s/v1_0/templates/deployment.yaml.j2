@@ -17,8 +17,10 @@ spec:
       containers:
         - name: {{ name }}
           image: {{ image }}:{{ tag }}
+          {% if port is defined -%}
           ports:
           - containerPort: {{ port }}
+          {%- endif %}
       {%- if env_vars is defined %}
           env:
         {%- for key, value in env_vars.items() %}

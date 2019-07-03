@@ -5,7 +5,7 @@ module "{{ configs.rds.name }}-rds" {
   identifier = "{{ configs.rds.name }}-postgres"
 
   engine            = "postgres"
-  engine_version    = "9.6.11"
+  engine_version    = "11.4"
   instance_class    = "{{ configs.rds.instance_size }}"
   allocated_storage = {{ configs.rds.size_gb }}
   storage_encrypted = false
@@ -34,10 +34,10 @@ module "{{ configs.rds.name }}-rds" {
   subnet_ids = {{ configs.rds.subnet_ids }}
 
   # DB parameter group
-  family = "postgres9.6"
+  family = "postgres11"
 
   # DB option group
-  major_engine_version = "9.6"
+  major_engine_version = "11.4"
 
   # Snapshot name upon DB deletion
   final_snapshot_identifier = "{{ configs.rds.name }}"

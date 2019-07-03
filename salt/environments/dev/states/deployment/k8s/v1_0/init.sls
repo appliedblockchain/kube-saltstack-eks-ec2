@@ -153,7 +153,7 @@ nginx_ingress_deploy:
 {%- if app.requires_database is defined and app.requires_database -%}
   {%- set rds_name = _cluster.cluster_name|replace('-','') -%} # As defined in rds_configs.j2
   {%- set rds_identifier = _cluster.cluster_name|replace('-','') + '-postgres' -%} # As defined in rds.tf
-  {% do env_vars.update({'DB_CONNECTION': 'postgresql://'+ salt.aws_utils.get_rds_endpoint(db_identifier=rds_identifier, client_id=client_id, region=_configs.region) +':'+ _cluster.database.username +'@'+ _cluster.database.password +':5432/'+ rds_name}) %}
+  {% do env_vars.update({'DB_CONNECTION': 'postgresql://'+ _cluster.database.username +':'+ _cluster.database.password +'@'+ salt.aws_utils.get_rds_endpoint(db_identifier=rds_identifier, client_id=client_id, region=_configs.region) +':5432/'+ rds_name}) %}
 {%- endif -%}
 
 {%- if app.static_env_vars is defined %}
@@ -175,10 +175,16 @@ nginx_ingress_deploy:
     - defaults:
         provider: {{ _cluster.provider}}
         name: {{ app.name }}
+        {% if app.replicas is defined -%}
         replicas: {{ app.replicas }}
+        {%- else %}
+        replicas: 1
+        {%- endif %}
         image: {{ app.image }}
         tag: {{ app.tag }}
+        {% if app.port is defined -%}
         port: {{ app.port }}
+        {%- endif %}
         env_vars: {{ env_vars }}
         {% if app.registry is defined -%}
         regsecret: {{ regcred_name }}
@@ -187,6 +193,7 @@ nginx_ingress_deploy:
         storage: {{ app.storage }}
         {%- endif %}
 
+{%- if app.public_access is defined and app.public_access %}
 {{ service_yaml }}:
   file.managed:
     - template: jinja
@@ -195,6 +202,7 @@ nginx_ingress_deploy:
     - defaults:
         name: {{ app.name }}
         port: {{ app.port }}
+{%- endif %}
 
 {{ app.name }}_deploy:
     cmd.run:
@@ -203,7 +211,9 @@ nginx_ingress_deploy:
             kubectl create secret docker-registry {{ regcred_name }} --docker-server={{app.registry.server}} --docker-username={{app.registry.username}} --docker-password={{app.registry.password}} -n {{ apps_namespace }}
             {%- endif %}
             kubectl apply -f {{ deploy_yaml }} -n {{ apps_namespace }}
+            {%- if app.public_access is defined and app.public_access %}
             kubectl apply -f {{ service_yaml }} -n {{ apps_namespace }}
+            {%- endif %}
         - env:
             - PATH: {{ path_var }}
             - KUBECONFIG: {{ kubeconfig }}
@@ -278,4 +288,55 @@ nginx_ingress_deploy:
     - require:
       - {{ client_id }}_get_external_ip
       - domain_test_pillar
+{% endfor %}
+
+
+{% for job in _deploy.job %}
+
+{%- set env_vars = {} -%}
+{%- if job.requires_database is defined and job.requires_database -%}
+  {%- set rds_name = _cluster.cluster_name|replace('-','') -%} # As defined in rds_configs.j2
+  {%- set rds_identifier = _cluster.cluster_name|replace('-','') + '-postgres' -%} # As defined in rds.tf
+  {% do env_vars.update({'DB_CONNECTION': 'postgresql://'+ _cluster.database.username +':'+ _cluster.database.password +'@'+ salt.aws_utils.get_rds_endpoint(db_identifier=rds_identifier, client_id=client_id, region=_configs.region) +':5432/'+ rds_name}) %}
+{%- endif -%}
+
+{%- if job.static_env_vars is defined %}
+  {%- for var in job.static_env_vars %}
+    {% do env_vars.update({var.name: var.value}) %}
+  {%- endfor %}
+{%- endif %}
+
+{%- set job_yaml = [base_app_dir, job.name + "_job.yaml"] | join("/") %}
+{%- set regcred_name = job.name + "-regcred" %}
+
+{{ job_yaml }}:
+  file.managed:
+    - template: jinja
+    - source: salt://{{tpldir}}/templates/job.yaml.j2
+    - failhard: True
+    - defaults:
+        name: {{ job.name }}
+        image: {{ job.image }}
+        command: {{ job.command }}
+        tag: {{ job.tag }}
+        env_vars: {{ env_vars }}
+        {% if job.registry is defined -%}
+        regsecret: {{ regcred_name }}
+        {%- endif %}
+
+{{ job.name }}_deploy:
+    cmd.run:
+        - name: |
+            {% if job.registry is defined -%}
+            kubectl create secret docker-registry {{ regcred_name }} --docker-server={{job.registry.server}} --docker-username={{job.registry.username}} --docker-password={{job.registry.password}} -n {{ apps_namespace }}
+            {%- endif %}
+            kubectl delete job {{ job.name }} -n {{ apps_namespace }}
+            kubectl apply -f {{ job_yaml }} -n {{ apps_namespace }}
+        - env:
+            - PATH: {{ path_var }}
+            - KUBECONFIG: {{ kubeconfig }}
+            - AWS_ACCESS_KEY_ID: {{ _auth.saltstack.aws_access_key_id}}
+            - AWS_SECRET_ACCESS_KEY: {{ _auth.saltstack.aws_secret_access_key}}
+        - require:
+          - {{ kubeconfig }}
 {% endfor %}

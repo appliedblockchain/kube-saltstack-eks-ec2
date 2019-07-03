@@ -21,6 +21,7 @@ applied_blockchain:
                   port: 8080
                   image: appliedblockchain/emsurge-api-dev
                   tag: latest # The use of latest is really bad. This field has to go.
+                  public_access: true
                   static_env_vars:
                     - name: NODE_ENV
                       value: development
@@ -44,6 +45,27 @@ applied_blockchain:
                     - name: API_BASE_URL
                       value: https://api.abtech.dev/api
                   public_access: true
+                  registry:
+                    server: https://index.docker.io/v1/
+                    username: abturing
+                    password: {{ salt.nacl.dec('kvBab0RRK9yLaUgFwMVaACnXMhKoO7zHYtBCp1gAXRixWUjd5ZTSKPI6BXGbe7vhCxBEKdxii2ChaK0efemY7ga1lmANCVEo') }}
+                - name: worker
+                  image: appliedblockchain/emsurge-worker-dev
+                  tag: latest # The use of latest is really bad. This field has to go.
+                  requires_database: true
+                  static_env_vars:
+                    - name: NODE_ENV
+                      value: development
+                  registry:
+                    server: https://index.docker.io/v1/
+                    username: abturing
+                    password: {{ salt.nacl.dec('kvBab0RRK9yLaUgFwMVaACnXMhKoO7zHYtBCp1gAXRixWUjd5ZTSKPI6BXGbe7vhCxBEKdxii2ChaK0efemY7ga1lmANCVEo') }}
+            job:
+                - name: database-migrations
+                  image: appliedblockchain/emsurge-db-migrate
+                  command: "npm run migrate"
+                  tag: latest
+                  requires_database: true
                   registry:
                     server: https://index.docker.io/v1/
                     username: abturing
