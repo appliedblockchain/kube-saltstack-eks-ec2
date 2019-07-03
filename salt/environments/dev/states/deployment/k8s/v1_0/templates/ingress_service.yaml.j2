@@ -13,11 +13,14 @@ spec:
   tls:
     - hosts:
     {%- for app in apps %}
+    {%- if app.public_access is defined and app.public_access %}
       - {{ app.name }}.{{ domain }}
+    {%- endif %}
     {%- endfor %}
       secretName: {{ domain }}
   rules:
   {%- for app in apps %}
+    {%- if app.public_access is defined and app.public_access %}
     - host: {{ app.name }}.{{ domain }}
       http:
         paths:
@@ -25,4 +28,5 @@ spec:
           backend:
             serviceName: {{ app.name }}
             servicePort: {{ app.port }}
+    {%- endif %}
   {%- endfor %}

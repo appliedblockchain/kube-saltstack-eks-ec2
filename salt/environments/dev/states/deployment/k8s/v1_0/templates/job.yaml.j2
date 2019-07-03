@@ -1,0 +1,27 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ name }}
+spec:
+  template:
+    spec:
+      containers:
+      - name: {{ name }}
+        image: {{ image }}:{{ tag }}
+        {% if command is defined -%}
+        command: ["{{ command.split(' ') | join('\", \"') }}"]
+        {%- endif %}
+    {%- if env_vars is defined %}
+        env:
+      {%- for key, value in env_vars.items() %}
+          - name: {{ key }}
+            value: {{ value }}
+      {%- endfor %}
+    {%- endif %}
+      restartPolicy: Never
+      {% if regsecret is defined -%}
+      imagePullSecrets:
+        - name: {{ regsecret }}
+      {%- endif %}
+  backoffLimit: 4
+

@@ -1,4 +1,4 @@
-apiVersion: apps/v1 
+apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: {{ name }}
@@ -21,9 +21,11 @@ spec:
       {%- endif %}
       containers:
         - name: {{ name }}
-          image: {{ image }}:{{ tag }} 
+          image: {{ image }}:{{ tag }}
+          {% if port is defined -%}
           ports:
           - containerPort: {{ port }}
+          {%- endif %}
           volumeMounts:
           - name: {{ name }}
             mountPath: {{ storage.mount_path }}
