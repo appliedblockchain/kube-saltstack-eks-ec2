@@ -43,3 +43,41 @@ class DNSimpleProvider(object):
             return {'result': False, 'data': str(e)}
         except IndexError:
             return {'result': False, 'data': 'record not found'}
+
+    def alias_record_exists(self, domain, name=None):
+        records = self.dnsimple_client.records(domain)
+        try:
+            def rfilter(x):
+                rtype, rname, rzoneid = x.get('record').get('type'), x.get('record').get('name'), x.get('record').get('zone_id')
+                return rtype == "ALIAS" and (rname == name if (name and name != "") else True) and (rzoneid == domain)
+            record = list(filter(rfilter, records))[0]
+            return record
+        except DNSimpleException as e:
+            return {'result': True, 'data': '{}{} alias not found'.format(name + '.' if name else '', domain)}
+        except IndexError as e:
+            return {'result': True, 'data': '{} alias not found'.format(name + '.' if name else '', domain)}
+
+    def alias_record_add(self, domain, name, content):
+        try:
+            return {'result': True, 'data': self.dnsimple_client.add_record(domain, {'type': 'ALIAS', 'name': name, 'content': content})}
+        except DNSimpleException as e:
+            return {'result': False, 'data': str(e)}
+
+    def alias_record_update(self, domain, name=None, content=""):
+        records = self.dnsimple_client.records(domain)
+        try:
+            def rfilter(x):
+                rtype, rname, rzoneid = x.get('record').get('type'), x.get('record').get('name'), x.get('record').get('zone_id')
+                return rtype == "ALIAS" and (rname == name if (name and name != "") else True) and (rzoneid == domain)
+            log.error(">>>>>>>>")
+            log.error(domain)
+            log.error(name)
+            log.error(content)
+            log.error(records)
+            record_id = list(filter(rfilter, records))[0].get('record').get('id')
+            log.error(list(filter(rfilter, records))[0].get('record'))
+            return {'result': True, 'data': self.dnsimple_client.update_record(domain, record_id, {'content': content})}
+        except DNSimpleException as e:
+            return {'result': False, 'data': str(e)}
+        except IndexError:
+            return {'result': False, 'data': 'record not found'}

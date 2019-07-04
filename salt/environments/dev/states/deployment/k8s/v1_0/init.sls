@@ -31,7 +31,7 @@ domain_test_pillar:
     - present:
       - {{ client_id }}:deployment:k8s:domain:name
       - {{ client_id }}:deployment:k8s:domain:cert64
-      - {{ client_id }}:deployment:k8s:domain:cert_key64
+      - {{ client_id }}:deployment:k8s:domain:wildcard_cert_key64
     - failhard: true
 
 {%- set _auth = salt.pillar.get([client_id, 'authentication', _cluster.provider]|join(':')) %}
@@ -92,9 +92,11 @@ nginx_ingress_deploy:
 {%- set apps_namespace = client_id|replace('_','-') %}
 
 # Setup Certificates
-{%- set cert_file = [base_app_dir, client_id + "_cert.pem"] | join("/") %}
-{%- set cert_key = [base_app_dir, client_id + "_cert.key"] | join("/") %}
-{{ cert_file }}:
+{%- set root_cert_file = [base_app_dir, client_id + "_root_cert.pem"] | join("/") %}
+{%- set root_cert_key = [base_app_dir, client_id + "_root_cert.key"] | join("/") %}
+{%- set wildcard_cert_file = [base_app_dir, client_id + "_cert.pem"] | join("/") %}
+{%- set wildcard_cert_key = [base_app_dir, client_id + "_cert.key"] | join("/") %}
+{{ root_cert_file }}:
   file.managed:
     - template: jinja
     - source: salt://{{tpldir}}/templates/base64_decode.j2
@@ -102,13 +104,31 @@ nginx_ingress_deploy:
     - defaults:
         content: {{ _deploy.domain.cert64 }}
 
-{{ cert_key }}:
+{{ root_cert_key }}:
   file.managed:
     - template: jinja
     - source: salt://{{tpldir}}/templates/base64_decode.j2
     - failhard: true
     - defaults:
         content: {{ _deploy.domain.cert_key64 }}
+
+{%- if _deploy.domain.wildcard_cert64 is defined %}
+{{ wildcard_cert_file }}:
+  file.managed:
+    - template: jinja
+    - source: salt://{{tpldir}}/templates/base64_decode.j2
+    - failhard: true
+    - defaults:
+        content: {{ _deploy.domain.wildcard_cert64 }}
+
+{{ wildcard_cert_key }}:
+  file.managed:
+    - template: jinja
+    - source: salt://{{tpldir}}/templates/base64_decode.j2
+    - failhard: true
+    - defaults:
+        content: {{ _deploy.domain.wildcard_cert_key64 }}
+{%- endif %}
 
 # Setup EFS Provisioner
 # https://github.com/kubernetes-incubator/external-storage/tree/master/aws/efs
@@ -244,7 +264,8 @@ nginx_ingress_deploy:
 {{ ingress_service }}_deploy:
     cmd.run:
         - name: |
-            kubectl create secret tls {{ _deploy.domain.name }} --key {{ cert_key }} --cert {{ cert_file }} -n {{ apps_namespace }}
+            {% if _deploy.domain.wildcard_cert64 is defined %}kubectl create secret tls wildcard.{{ _deploy.domain.name }} --key {{ wildcard_cert_key }} --cert {{ wildcard_cert_file }} -n {{ apps_namespace }}{% endif %}
+            kubectl create secret tls {{ _deploy.domain.name }} --key {{ root_cert_key }} --cert {{ root_cert_file }} -n {{ apps_namespace }}
             kubectl apply -f {{ ingress_service }} -n {{ apps_namespace }}
         - env:
             - PATH: {{ path_var }}
@@ -253,8 +274,8 @@ nginx_ingress_deploy:
             - AWS_SECRET_ACCESS_KEY: {{ _auth.saltstack.aws_secret_access_key}}
         - require:
           - {{ kubeconfig }}
-          - {{ cert_key }}
-          - {{ cert_file }}
+          - {{ wildcard_cert_key }}
+          - {{ wildcard_cert_file }}
           - {{ ingress_service }}
           {%- for app in _deploy.apps %}
           - {{ app.name }}_deploy
@@ -280,19 +301,21 @@ nginx_ingress_deploy:
 
 {% for app in _deploy.apps %}
 {{ app.name }}_{{ client_id }}_dns:
-  dnsimple.cname_present:
+  dnsimple.{%- if app.root_application is defined and app.root_application %}alias{% else %}cname{% endif %}_present:
     - client_id: {{ client_id }}
     - domain: {{ _deploy.domain.name }}
+    {%- if app.root_application is defined and app.root_application %}
+    - name: ""
+    {% else %}
     - name: {{ app.name }}
+    {%- endif %}
     - content_file: {{ _configs.work_dir+"/"+ client_id + "/external_ip" }}
     - require:
       - {{ client_id }}_get_external_ip
       - domain_test_pillar
 {% endfor %}
 
-
 {% for job in _deploy.job %}
-
 {%- set env_vars = {} -%}
 {%- if job.requires_database is defined and job.requires_database -%}
   {%- set rds_name = _cluster.cluster_name|replace('-','') -%} # As defined in rds_configs.j2

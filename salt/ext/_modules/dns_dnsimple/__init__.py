@@ -20,3 +20,15 @@ def cname_record_add(client_id, domain, name, content):
 
 def cname_record_update(client_id, domain, name, content):
     return DNSimpleProvider(account_id=_confs(client_id).get('account_id'), api_token=_confs(client_id).get('api_token')).cname_record_update(domain=domain, name=name, content=content)
+
+
+def alias_record_exists(client_id, domain, name):
+    return DNSimpleProvider(account_id=_confs(client_id).get('account_id'), api_token=_confs(client_id).get('api_token')).alias_record_exists(domain=domain, name=name)
+
+
+def alias_record_add(client_id, domain, name, content):
+    return DNSimpleProvider(account_id=_confs(client_id).get('account_id'), api_token=_confs(client_id).get('api_token')).alias_record_add(domain=domain, name=name, content=content)
+
+
+def alias_record_update(client_id, domain, name, content):
+    return DNSimpleProvider(account_id=_confs(client_id).get('account_id'), api_token=_confs(client_id).get('api_token')).alias_record_update(domain=domain, name=name, content=content)

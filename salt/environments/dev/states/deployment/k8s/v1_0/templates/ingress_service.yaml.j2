@@ -11,17 +11,40 @@ metadata:
     nginx.ingress.kubernetes.io/use-proxy-protocol: "true"
 spec:
   tls:
-    - hosts:
+    {%- set apps_on_wildcard = [] %}
+    {%- set apps_on_root = [] %}
     {%- for app in apps %}
+    {%- if app.root_application is defined and app.root_application %}
+    {%- do apps_on_root.append(app) %}
+    {%- else %}
+    {%- do apps_on_wildcard.append(app) %}
+    {%- endif %}
+    {%- endfor -%}
+
+    {%- if apps_on_wildcard is defined %}
+    - hosts:
+    {%- for app in apps_on_wildcard %}
     {%- if app.public_access is defined and app.public_access %}
       - {{ app.name }}.{{ domain }}
     {%- endif %}
     {%- endfor %}
+      secretName: wildcard.{{ domain }}
+    {%- endif -%}
+
+    {%- if apps_on_wildcard is defined %}
+    - hosts:
+    {%- for app in apps_on_root %}
+    {%- if app.public_access is defined and app.public_access %}
+      - {{ domain }}
+    {%- endif %}
+    {%- endfor %}
       secretName: {{ domain }}
+    {%- endif %}
+
   rules:
   {%- for app in apps %}
     {%- if app.public_access is defined and app.public_access %}
-    - host: {{ app.name }}.{{ domain }}
+    - host: {% if app.root_application is defined and app.root_application %}{{ domain }}{% else %}{{ app.name }}.{{ domain }}{% endif %}
       http:
         paths:
         - path: {% if app.path is defined %}{{app.path}}{% else %}/{% endif %}
