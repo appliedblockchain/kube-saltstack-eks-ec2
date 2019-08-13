@@ -145,3 +145,8 @@ Conventions are key in order to improve cross-team colaboration. Here follows so
         * latest.sls: this points to latest stable we support
 - Ensure that all state files have sane defaults and can be parsed and executed without any custom cli options
 - All execution modules and state should follow same template for anyone to diggin. Convention over configuration supported through templates.
+
+### Notes
+
+- check https://github.com/appliedblockchain/launchpad.js
+- please make sure to regenerate all the keys
