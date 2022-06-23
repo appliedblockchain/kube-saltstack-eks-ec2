@@ -9,7 +9,7 @@ name = "pypi"
 pytest = "==3.1.1"
 
 [packages]
-salt = "==2019.2.0"
+salt = "==3003.3"
 salt-ssh = "==2019.2.0"
 libnacl = "==1.6.1"
 dnsimple = "==1.2.0"
